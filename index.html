@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的个人工作台</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Lucide 图标库 -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;600&display=swap');
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            overflow: hidden;
+            background-color: #000;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* 极致毛玻璃效果 - 增加了饱和度和模糊度，更有苹果味 */
+        .apple-glass {
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(35px) saturate(200%);
+            -webkit-backdrop-filter: blur(35px) saturate(200%);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 15px 50px -10px rgba(0, 0, 0, 0.4);
+        }
+
+        /* 背景层 */
+        #bg-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&q=80&w=2560');
+            background-size: cover; 
+            background-position: center;
+            z-index: -2; 
+        }
+
+        .modal {
+            display: none; position: fixed; top: 0; left: 0; 
+            width: 100%; height: 100%; background: rgba(0,0,0,0.5); 
+            align-items: center; justify-content: center; z-index: 100;
+            backdrop-filter: blur(20px);
+        }
+        .modal.active { display: flex; }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        
+        .hover-lift { transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        .hover-lift:hover { transform: translateY(-8px); filter: brightness(1.2); }
+
+        .todo-item.completed span {
+            text-decoration: line-through;
+            opacity: 0.3;
+        }
+
+        /* 页面载入动画 */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(1.02); filter: blur(10px); }
+            to { opacity: 1; transform: scale(1); filter: blur(0px); }
+        }
+        .animate-page { animation: fadeIn 1.5s cubic-bezier(0.16, 1, 0.3, 1); }
+    </style>
+</head>
+<body class="text-white animate-page">
+
+    <div id="bg-overlay"></div>
+    <div class="fixed inset-0 bg-black/10 z-[-1]"></div>
+
+    <div class="h-screen w-full flex flex-col p-10 lg:p-12 relative">
+        
+        <!-- 顶部：设置按钮 -->
+        <div class="flex justify-end items-start z-10">
+            <div class="flex gap-4 mt-2">
+                <!-- 音乐下拉菜单 -->
+                <div class="relative group/audio">
+                    <button id="audio-btn" class="apple-glass p-5 rounded-full hover:bg-white/30 transition-all flex items-center justify-center">
+                        <i id="audio-main-icon" data-lucide="music" class="w-6 h-6"></i>
+                    </button>
+                    <!-- 下拉列表 -->
+                    <div class="absolute right-0 mt-3 py-3 w-48 apple-glass rounded-[1.8rem] opacity-0 invisible group-hover/audio:opacity-100 group-hover/audio:visible transition-all duration-500 z-50 transform translate-y-2 group-hover/audio:translate-y-0">
+                        <div class="px-6 py-2 mb-1 text-[9px] opacity-30 font-black tracking-[0.3em] uppercase">Soundscape</div>
+                        <button onclick="changeAudio('none')" class="w-full text-left px-6 py-3 text-[10px] uppercase tracking-widest font-bold hover:bg-white/10 transition-colors flex items-center gap-3">
+                            <i data-lucide="volume-x" class="w-4 h-4 opacity-50"></i> Mute
+                        </button>
+                        <button onclick="changeAudio('rain')" class="w-full text-left px-6 py-3 text-[10px] uppercase tracking-widest font-bold hover:bg-white/10 transition-colors flex items-center gap-3">
+                            <i data-lucide="cloud-rain" class="w-4 h-4 opacity-50"></i> Rainy Day
+                        </button>
+                        <button onclick="changeAudio('white')" class="w-full text-left px-6 py-3 text-[10px] uppercase tracking-widest font-bold hover:bg-white/10 transition-colors flex items-center gap-3">
+                            <i data-lucide="wind" class="w-4 h-4 opacity-50"></i> White Noise
+                        </button>
+                        <button onclick="changeAudio('soothing')" class="w-full text-left px-6 py-3 text-[10px] uppercase tracking-widest font-bold hover:bg-white/10 transition-colors flex items-center gap-3">
+                            <i data-lucide="coffee" class="w-4 h-4 opacity-50"></i> Soothing
+                        </button>
+                    </div>
+                </div>
+                
+                <button onclick="toggleModal('settings-modal')" class="apple-glass p-5 rounded-full hover:bg-white/30 transition-all">
+                    <i data-lucide="settings-2" class="w-6 h-6"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- 中间：时钟、天气与搜索 -->
+        <div class="flex flex-col items-center justify-center mt-4">
+            <div class="w-full max-w-3xl flex flex-col items-center">
+                
+                <!-- 时间与天气容器 -->
+                <div class="flex flex-col items-center mb-8 animate-page">
+                    <div id="time" class="text-8xl font-extralight tracking-tighter mb-2">00:00</div>
+                    <div class="flex items-center gap-6 opacity-60">
+                        <div id="date" class="text-[11px] tracking-[0.5em] uppercase font-bold border-r border-white/20 pr-6">JAN 01, MONDAY</div>
+                        <div id="weather" class="flex items-center gap-2 text-[11px] tracking-[0.3em] uppercase font-bold">
+                            <span id="weather-temp">--°C</span>
+                            <span id="weather-desc">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 搜索框 -->
+                <div class="apple-glass rounded-full p-2.5 flex items-center w-full focus-within:ring-[12px] ring-white/5 transition-all duration-700">
+                    <select id="engine-select" class="bg-transparent border-none text-[10px] px-8 outline-none cursor-pointer border-r border-white/20 appearance-none font-black uppercase tracking-[0.2em] text-center">
+                        <option value="baidu" class="text-black">Baidu</option>
+                        <option value="google" class="text-black">Google</option>
+                        <option value="bing" class="text-black">Bing</option>
+                    </select>
+                    <input type="text" id="search-input" placeholder="Discovery starts here..." 
+                           class="flex-1 bg-transparent border-none outline-none px-6 text-xl placeholder:text-white/20 font-light"
+                           onkeydown="if(event.key === 'Enter') performSearch()">
+                    <button onclick="performSearch()" class="bg-white/10 hover:bg-white/30 p-5 rounded-full transition-all">
+                        <i data-lucide="search" class="w-6 h-6"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 下方分栏区域 -->
+        <div class="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-8 mt-12 overflow-hidden pb-4">
+            <!-- 左分栏：常用网站 -->
+            <div class="apple-glass rounded-[2.5rem] p-8 flex flex-col overflow-hidden group/shortcuts">
+                <div class="flex justify-between items-center mb-6">
+                    <div class="flex items-center gap-3 opacity-30 text-[10px] uppercase tracking-[0.4em] font-black">
+                        <i data-lucide="layout-grid" class="w-4 h-4"></i> Shortcuts
+                    </div>
+                    <div class="flex gap-2 opacity-0 group-hover/shortcuts:opacity-30 transition-opacity">
+                        <button onclick="prevPage()" class="hover:opacity-100"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                        <span id="page-indicator" class="text-[10px] font-black">1/1</span>
+                        <button onclick="nextPage()" class="hover:opacity-100"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+                    </div>
+                </div>
+                <div class="flex-1">
+                    <div class="grid grid-cols-3 gap-6" id="bookmarks-grid"></div>
+                </div>
+            </div>
+
+            <!-- 中分栏：Note / Todo 切换 -->
+            <div class="apple-glass rounded-[2.5rem] p-8 flex flex-col overflow-hidden relative">
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex gap-4">
+                        <button onclick="switchTab('note')" id="tab-note" class="text-[10px] uppercase tracking-[0.4em] font-black transition-all opacity-100">Note</button>
+                        <button onclick="switchTab('todo')" id="tab-todo" class="text-[10px] uppercase tracking-[0.4em] font-black transition-all opacity-30">Todo</button>
+                    </div>
+                    <div id="todo-add-btn" class="hidden">
+                        <button onclick="addTodo()" class="opacity-30 hover:opacity-100 transition-all"><i data-lucide="plus" class="w-4 h-4"></i></button>
+                    </div>
+                </div>
+                
+                <div id="pane-note" class="flex-1 flex flex-col">
+                    <textarea id="notepad" class="w-full flex-1 bg-transparent border-none outline-none text-sm resize-none leading-relaxed no-scrollbar placeholder:text-white/10 font-light" placeholder="Write something..."></textarea>
+                </div>
+                
+                <div id="pane-todo" class="flex-1 hidden overflow-y-auto no-scrollbar space-y-3">
+                    <div id="todo-list" class="space-y-3"></div>
+                </div>
+            </div>
+
+            <!-- 右分栏：桌面宠物 -->
+            <div class="apple-glass rounded-[2.5rem] p-8 flex flex-col items-center justify-center overflow-hidden">
+                <div class="flex items-center gap-3 mb-6 opacity-30 text-[10px] uppercase tracking-[0.4em] font-black self-start">
+                    <i data-lucide="heart" class="w-4 h-4"></i> Companion
+                </div>
+                <div class="flex-1 flex flex-col items-center justify-center">
+                    <div id="pet" class="text-6xl mb-4 transition-all duration-500 cursor-pointer hover:scale-110">🐱</div>
+                    <div id="pet-status" class="text-[10px] opacity-40 uppercase tracking-[0.2em] font-black">Happy to see you!</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 弹窗 -->
+    <div id="donate-modal" class="modal">
+        <div class="apple-glass p-16 rounded-[4.5rem] max-w-sm w-full text-center relative mx-4">
+            <button onclick="toggleModal('donate-modal')" class="absolute top-10 right-10 opacity-30 hover:opacity-100"><i data-lucide="x"></i></button>
+            <h3 class="text-3xl font-light mb-4 tracking-tight">赞助作者</h3>
+            <div class="bg-white/90 p-6 rounded-[3rem] inline-block mb-8">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=Donation" alt="QR" class="w-44 h-44 opacity-80">
+            </div>
+            <p class="text-[10px] opacity-30 uppercase tracking-[0.5em] font-black italic">Thanks for your coffee!</p>
+        </div>
+    </div>
+
+    <div id="bookmark-modal" class="modal">
+        <div class="apple-glass p-12 rounded-[4rem] max-w-md w-full relative">
+            <h3 id="bm-modal-title" class="text-2xl font-light mb-10 tracking-tight">添加快捷方式</h3>
+            <div class="space-y-6">
+                <input type="text" id="bm-name" class="w-full bg-white/5 border border-white/20 rounded-2xl p-5 outline-none font-light" placeholder="名称">
+                <input type="text" id="bm-url" class="w-full bg-white/5 border border-white/20 rounded-2xl p-5 outline-none font-light" placeholder="地址 (https://...)">
+                <div class="flex gap-4">
+                    <button onclick="closeBookmarkModal()" class="flex-1 border border-white/20 py-4 rounded-2xl opacity-50">取消</button>
+                    <button id="bm-save-btn" onclick="saveBookmark()" class="flex-1 bg-white text-black font-black py-4 rounded-2xl">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="settings-modal" class="modal">
+        <div class="apple-glass p-12 rounded-[4rem] max-w-md w-full relative">
+            <button onclick="toggleModal('settings-modal')" class="absolute top-10 right-10 opacity-30 hover:opacity-100"><i data-lucide="x"></i></button>
+            <h3 class="text-2xl font-light mb-10 tracking-tight">设置</h3>
+            <div class="space-y-8">
+                <div class="inline-flex rounded-2xl overflow-hidden border border-white/20 bg-white/5 p-1 w-full">
+                    <button id="bg-mode-url" onclick="setBgMode('url')" class="flex-1 py-3 rounded-xl text-[10px] uppercase tracking-[0.35em] font-black opacity-70 hover:opacity-100 transition-all">网络图片</button>
+                    <button id="bg-mode-local" onclick="setBgMode('local')" class="flex-1 py-3 rounded-xl text-[10px] uppercase tracking-[0.35em] font-black opacity-70 hover:opacity-100 transition-all">本地图片</button>
+                </div>
+
+                <div id="bg-pane-url" class="space-y-4">
+                    <input type="text" id="bg-url" class="w-full bg-white/5 border border-white/20 rounded-2xl p-5 outline-none font-light" placeholder="图片链接 (https://...jpg/png/webp)">
+                    <button onclick="applyBgFromUrl()" class="w-full bg-white text-black font-black py-5 rounded-[2.5rem]">应用网络壁纸</button>
+                </div>
+
+                <div id="bg-pane-local" class="space-y-4 hidden">
+                    <input type="file" id="bg-file" accept="image/*" class="w-full bg-white/5 border border-white/20 rounded-2xl p-5 outline-none font-light">
+                    <button onclick="applyBgFromLocal()" class="w-full bg-white text-black font-black py-5 rounded-[2.5rem]">应用本地壁纸</button>
+                    <p class="text-[10px] opacity-40 tracking-[0.25em] uppercase font-black">提示：本地图片会以数据形式保存在浏览器里</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <audio id="bg-audio" loop>
+        <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        lucide.createIcons();
+
+        let bookmarks = JSON.parse(localStorage.getItem('bookmarks_v7')) || [
+            { name: 'Bilibili', url: 'https://bilibili.com', icon: 'tv' },
+            { name: 'Github', url: 'https://github.com', icon: 'github' },
+            { name: 'ArchDaily', url: 'https://archdaily.com', icon: 'layout' },
+            { name: 'Pinterest', url: 'https://pinterest.com', icon: 'image' }
+        ];
+
+        let todos = JSON.parse(localStorage.getItem('todos_v7')) || [
+            { id: 1, text: '开始设计第一稿', completed: false }
+        ];
+
+        let currentPage = 0;
+        const itemsPerPage = 5; // 5个网站 + 1个添加按钮 = 6格
+
+        function renderBookmarks() {
+            const grid = document.getElementById('bookmarks-grid');
+            const start = currentPage * itemsPerPage;
+            const end = start + itemsPerPage;
+            const pageItems = bookmarks.slice(start, end);
+            
+            const totalPages = Math.max(1, Math.ceil((bookmarks.length + 1) / 6));
+            document.getElementById('page-indicator').innerText = `${currentPage + 1}/${totalPages}`;
+
+            let html = pageItems.map((s, index) => {
+                const globalIndex = start + index;
+                return `
+                <div class="flex flex-col items-center gap-2 group relative">
+                    <div class="absolute -top-2 -right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-all z-10">
+                        <button onclick="editBookmark(${globalIndex})" class="bg-white/20 backdrop-blur-md rounded-full p-1.5 hover:bg-white/40"><i data-lucide="edit-2" class="w-3 h-3"></i></button>
+                        <button onclick="deleteBookmark(${globalIndex})" class="bg-red-500/60 backdrop-blur-md rounded-full p-1.5 hover:bg-red-600/80"><i data-lucide="x" class="w-3 h-3"></i></button>
+                    </div>
+                    <a href="${s.url}" target="_blank" class="apple-glass w-full aspect-square rounded-[1.2rem] flex items-center justify-center hover-lift group-hover:bg-white/30 shadow-sm">
+                        <i data-lucide="${s.icon || 'link-2'}" class="w-5 h-5 opacity-70"></i>
+                    </a>
+                    <span class="text-[8px] opacity-30 group-hover:opacity-100 tracking-[0.1em] font-bold uppercase truncate w-full text-center transition-opacity">${s.name}</span>
+                </div>
+            `}).join('');
+
+            // 如果当前页还没放满，或者当前页是最后一页且刚好放满，就显示添加按钮
+            if (pageItems.length < itemsPerPage) {
+                html += `
+                    <button onclick="openAddModal()" class="flex flex-col items-center gap-2 group">
+                        <div class="apple-glass w-full aspect-square rounded-[1.2rem] flex items-center justify-center border-dashed border-white/10 hover:bg-white/10 transition-all">
+                            <i data-lucide="plus" class="w-5 h-5 opacity-20 group-hover:opacity-50"></i>
+                        </div>
+                        <span class="text-[8px] opacity-10 tracking-[0.1em] uppercase font-bold text-center group-hover:opacity-30">Add</span>
+                    </button>
+                `;
+            }
+
+            grid.innerHTML = html;
+            lucide.createIcons();
+        }
+
+        let editingIndex = -1;
+
+        function openAddModal() {
+            editingIndex = -1;
+            document.getElementById('bm-modal-title').innerText = "添加快捷方式";
+            document.getElementById('bm-name').value = '';
+            document.getElementById('bm-url').value = '';
+            toggleModal('bookmark-modal');
+        }
+
+        function editBookmark(index) {
+            editingIndex = index;
+            const bm = bookmarks[index];
+            document.getElementById('bm-modal-title').innerText = "编辑快捷方式";
+            document.getElementById('bm-name').value = bm.name;
+            document.getElementById('bm-url').value = bm.url;
+            toggleModal('bookmark-modal');
+        }
+
+        function closeBookmarkModal() {
+            toggleModal('bookmark-modal');
+        }
+
+        function saveBookmark() {
+            const name = document.getElementById('bm-name').value;
+            const url = document.getElementById('bm-url').value;
+            if(name && url) {
+                const formattedUrl = url.startsWith('http') ? url : 'https://' + url;
+                if (editingIndex > -1) {
+                    bookmarks[editingIndex] = { ...bookmarks[editingIndex], name, url: formattedUrl };
+                } else {
+                    bookmarks.push({ name, url: formattedUrl, icon: 'globe' });
+                }
+                localStorage.setItem('bookmarks_v7', JSON.stringify(bookmarks));
+                renderBookmarks();
+                closeBookmarkModal();
+            }
+        }
+
+        function deleteBookmark(index) {
+            bookmarks.splice(index, 1);
+            localStorage.setItem('bookmarks_v7', JSON.stringify(bookmarks));
+            // 如果删除了之后当前页空了，且不是第一页，则跳到前一页
+            const totalPages = Math.ceil((bookmarks.length + 1) / 6);
+            if (currentPage >= totalPages && currentPage > 0) currentPage--;
+            renderBookmarks();
+        }
+
+        function prevPage() {
+            if (currentPage > 0) {
+                currentPage--;
+                renderBookmarks();
+            }
+        }
+
+        function nextPage() {
+            const totalPages = Math.ceil((bookmarks.length + 1) / 6);
+            if (currentPage < totalPages - 1) {
+                currentPage++;
+                renderBookmarks();
+            }
+        }
+
+        function renderTodos() {
+            const list = document.getElementById('todo-list');
+            list.innerHTML = todos.map((t, index) => `
+                <div class="todo-item ${t.completed ? 'completed' : ''} flex items-center justify-between gap-4 group/item">
+                    <div class="flex items-center gap-4 cursor-pointer" onclick="toggleTodo(${index})">
+                        <div class="w-5 h-5 rounded-md border border-white/30 flex items-center justify-center transition-all ${t.completed ? 'bg-white/40 border-transparent' : ''}">
+                            ${t.completed ? '<i data-lucide="check" class="w-3 h-3"></i>' : ''}
+                        </div>
+                        <span class="text-sm font-light tracking-wide">${t.text}</span>
+                    </div>
+                    <button onclick="deleteTodo(${index})" class="opacity-0 group-hover/item:opacity-40 hover:text-red-400 transition-all">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function addTodo() {
+            const text = prompt("新任务:");
+            if(text) {
+                todos.push({ id: Date.now(), text, completed: false });
+                localStorage.setItem('todos_v7', JSON.stringify(todos));
+                renderTodos();
+            }
+        }
+
+        function toggleTodo(index) {
+            todos[index].completed = !todos[index].completed;
+            localStorage.setItem('todos_v7', JSON.stringify(todos));
+            renderTodos();
+        }
+
+        function deleteTodo(index) {
+            todos.splice(index, 1);
+            localStorage.setItem('todos_v7', JSON.stringify(todos));
+            renderTodos();
+        }
+
+        const audioSources = {
+            rain: 'https://www.soundjay.com/nature/sounds/rain-07.mp3',
+            white: 'https://www.soundjay.com/misc/sounds/white-noise-01.mp3',
+            soothing: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3'
+        };
+
+        function changeAudio(type) {
+            const audio = document.getElementById('bg-audio');
+            const btn = document.getElementById('audio-btn');
+            const mainIcon = document.getElementById('audio-main-icon');
+
+            if (type === 'none') {
+                audio.pause();
+                btn.classList.remove('bg-white/40');
+                mainIcon.setAttribute('data-lucide', 'music');
+            } else {
+                audio.src = audioSources[type];
+                audio.play();
+                btn.classList.add('bg-white/40');
+                
+                // 根据类型切换图标
+                const icons = { rain: 'cloud-rain', white: 'wind', soothing: 'coffee' };
+                mainIcon.setAttribute('data-lucide', icons[type]);
+            }
+            lucide.createIcons();
+        }
+
+        function updateClock() {
+            const now = new Date();
+            const h = now.getHours().toString().padStart(2, '0');
+            const m = now.getMinutes().toString().padStart(2, '0');
+            document.getElementById('time').innerText = `${h}:${m}`;
+            document.getElementById('date').innerText = now.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric', weekday: 'long' });
+        }
+        setInterval(updateClock, 1000); 
+        updateClock();
+
+        async function fetchWeather() {
+            try {
+                // 使用浏览器地理位置，如果失败则回退到北京
+                navigator.geolocation.getCurrentPosition(async (pos) => {
+                    const lat = pos.coords.latitude;
+                    const lon = pos.coords.longitude;
+                    const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+                    const data = await res.json();
+                    const weather = data.current_weather;
+                    document.getElementById('weather-temp').innerText = `${Math.round(weather.temperature)}°C`;
+                    document.getElementById('weather-desc').innerText = getWeatherDesc(weather.weathercode);
+                }, () => {
+                    // 回退方案
+                    document.getElementById('weather-desc').innerText = "Location needed";
+                });
+            } catch (e) {
+                console.error("Weather fetch failed");
+            }
+        }
+
+        function getWeatherDesc(code) {
+            const map = {
+                0: 'Clear', 1: 'Mainly Clear', 2: 'Partly Cloudy', 3: 'Overcast',
+                45: 'Fog', 48: 'Depositing Rime Fog', 51: 'Light Drizzle',
+                61: 'Slight Rain', 71: 'Slight Snow', 95: 'Thunderstorm'
+            };
+            return map[code] || 'Cloudy';
+        }
+        fetchWeather();
+        setInterval(fetchWeather, 1800000); // 每30分钟更新一次
+
+        function performSearch() {
+            const q = document.getElementById('search-input').value.trim();
+            if(!q) return;
+            const engine = document.getElementById('engine-select').value;
+            const urls = {
+                baidu: `https://www.baidu.com/s?wd=${encodeURIComponent(q)}`,
+                google: `https://www.google.com/search?q=${encodeURIComponent(q)}`,
+                bing: `https://www.bing.com/search?q=${encodeURIComponent(q)}`
+            };
+            window.open(urls[engine], '_blank');
+        }
+
+        let pomoTime = 25 * 60;
+        let pomoInterval = null;
+        function togglePomo() {
+            const btn = document.getElementById('pomo-btn');
+            if(pomoInterval) {
+                clearInterval(pomoInterval); pomoInterval = null;
+                btn.innerText = "Resume";
+            } else {
+                pomoInterval = setInterval(() => {
+                    pomoTime--;
+                    const m = Math.floor(pomoTime / 60);
+                    const s = pomoTime % 60;
+                    document.getElementById('pomo-timer').innerText = `${m}:${s.toString().padStart(2, '0')}`;
+                    if(pomoTime <= 0) {
+                        clearInterval(pomoInterval);
+                        alert("专注完成！");
+                        pomoTime = 25 * 60;
+                        document.getElementById('pomo-timer').innerText = "25:00";
+                    }
+                }, 1000);
+                btn.innerText = "Pause";
+            }
+        }
+
+        function setActiveBgModeUI(mode) {
+            const btnUrl = document.getElementById('bg-mode-url');
+            const btnLocal = document.getElementById('bg-mode-local');
+            const paneUrl = document.getElementById('bg-pane-url');
+            const paneLocal = document.getElementById('bg-pane-local');
+
+            const activeCls = 'bg-white/15';
+            btnUrl.classList.toggle(activeCls, mode === 'url');
+            btnLocal.classList.toggle(activeCls, mode === 'local');
+            paneUrl.classList.toggle('hidden', mode !== 'url');
+            paneLocal.classList.toggle('hidden', mode !== 'local');
+        }
+
+        function setBgMode(mode) {
+            localStorage.setItem('workbench_bg_mode_v8', mode);
+            setActiveBgModeUI(mode);
+            lucide.createIcons();
+        }
+
+        function applyBgImageUrl(url) {
+            document.getElementById('bg-overlay').style.backgroundImage = `url('${url}')`;
+        }
+
+        function applyBgFromUrl() {
+            const raw = (document.getElementById('bg-url').value || '').trim();
+            if(!raw) return;
+            const url = raw.startsWith('http') ? raw : `https://${raw}`;
+            applyBgImageUrl(url);
+            localStorage.setItem('workbench_bg_mode_v8', 'url');
+            localStorage.setItem('workbench_bg_url_v8', url);
+            toggleModal('settings-modal');
+        }
+
+        function applyBgFromLocal() {
+            const input = document.getElementById('bg-file');
+            const file = input.files && input.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+                const dataUrl = reader.result;
+                applyBgImageUrl(dataUrl);
+                localStorage.setItem('workbench_bg_mode_v8', 'local');
+                localStorage.setItem('workbench_bg_local_v8', dataUrl);
+                toggleModal('settings-modal');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function toggleModal(id) { 
+            document.getElementById(id).classList.toggle('active'); 
+        }
+
+        // 点击遮罩层关闭弹窗（点内容区域不关闭）
+        ['donate-modal', 'bookmark-modal', 'settings-modal'].forEach((id) => {
+            const modal = document.getElementById(id);
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) toggleModal(id);
+            });
+        });
+
+        const np = document.getElementById('notepad');
+        np.value = localStorage.getItem('notes_v7') || '';
+        np.oninput = () => localStorage.setItem('notes_v7', np.value);
+
+        function switchTab(tab) {
+            const isNote = tab === 'note';
+            document.getElementById('pane-note').classList.toggle('hidden', !isNote);
+            document.getElementById('pane-todo').classList.toggle('hidden', isNote);
+            document.getElementById('todo-add-btn').classList.toggle('hidden', isNote);
+            document.getElementById('tab-note').style.opacity = isNote ? '1' : '0.3';
+            document.getElementById('tab-todo').style.opacity = isNote ? '0.3' : '1';
+        }
+
+        // 宠物交互
+        const petEmojis = ['🐱', '😸', '😹', '😴', '😋', '🧐'];
+        const pet = document.getElementById('pet');
+        pet.onclick = () => {
+            pet.innerText = petEmojis[Math.floor(Math.random() * petEmojis.length)];
+            pet.style.transform = 'scale(1.3) rotate(10deg)';
+            setTimeout(() => pet.style.transform = 'scale(1) rotate(0deg)', 200);
+            const statuses = ["Meow!", "Purrr...", "Did you finish your work?", "I'm hungry!", "So happy!"];
+            document.getElementById('pet-status').innerText = statuses[Math.floor(Math.random() * statuses.length)];
+        };
+
+        window.onload = () => {
+            renderBookmarks();
+            renderTodos();
+            const mode = localStorage.getItem('workbench_bg_mode_v8') || 'url';
+            setActiveBgModeUI(mode);
+
+            const savedUrl = localStorage.getItem('workbench_bg_url_v8');
+            if(savedUrl) document.getElementById('bg-url').value = savedUrl;
+
+            if(mode === 'local') {
+                const savedLocal = localStorage.getItem('workbench_bg_local_v8');
+                if(savedLocal) applyBgImageUrl(savedLocal);
+            } else {
+                if(savedUrl) applyBgImageUrl(savedUrl);
+            }
+        };
+    </script>
+</body>
+</html>
