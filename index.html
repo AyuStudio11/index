@@ -209,7 +209,10 @@
                         <div class="w-px h-4 bg-white/10 my-auto mx-1"></div>
                         <button onclick="formatDoc('justifyLeft')" class="toolbar-btn" title="左对齐"><i data-lucide="align-left" class="w-4 h-4"></i></button>
                         <button onclick="formatDoc('justifyCenter')" class="toolbar-btn" title="居中"><i data-lucide="align-center" class="w-4 h-4"></i></button>
-                        <button onclick="formatDoc('foreColor', '#34d399')" class="toolbar-btn text-emerald-400" title="绿色字体"><i data-lucide="palette" class="w-4 h-4"></i></button>
+                        <div class="relative flex items-center">
+                            <button class="toolbar-btn" title="自定义颜色"><i data-lucide="palette" class="w-4 h-4"></i></button>
+                            <input type="color" oninput="formatDoc('foreColor', this.value)" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full">
+                        </div>
                         <button onclick="formatDoc('removeFormat')" class="toolbar-btn" title="清除格式"><i data-lucide="eraser" class="w-4 h-4"></i></button>
                     </div>
                     <div id="notepad" contenteditable="true" class="rich-editor no-scrollbar" placeholder="Start typing your thoughts..."></div>
