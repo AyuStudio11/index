@@ -144,18 +144,18 @@
                 <!-- 时间与天气容器 -->
                 <div class="flex flex-col items-center mb-6 animate-page">
                     <div id="time" class="text-[120px] lg:text-[140px] font-[200] tracking-tighter leading-none mb-4">00:00</div>
-                    <div class="flex items-center gap-6 opacity-60 mb-8">
-                        <div id="date" class="text-[11px] tracking-[0.5em] uppercase font-bold border-r border-white/20 pr-6">JAN 01, MONDAY</div>
-                        <div id="weather" class="flex items-center gap-2 text-[11px] tracking-[0.3em] uppercase font-bold">
+                    <div class="flex items-center gap-6 opacity-90 mb-8">
+                        <div id="date" class="text-[12px] tracking-[0.5em] uppercase font-bold border-r border-white/20 pr-6 text-white">JAN 01, MONDAY</div>
+                        <div id="weather" class="flex items-center gap-2 text-[12px] tracking-[0.3em] uppercase font-bold text-white">
                             <span id="weather-temp">--°C</span>
                             <span id="weather-desc">Loading...</span>
                         </div>
                     </div>
 
                     <!-- 每日格言 -->
-                    <div id="hitokoto-container" class="max-w-xl text-center px-4 mb-8 h-12 flex flex-col justify-center">
-                        <p id="hitokoto" class="text-sm font-light tracking-widest opacity-40 italic"></p>
-                        <p id="hitokoto-from" class="text-[9px] font-bold tracking-[0.3em] uppercase opacity-20 mt-2"></p>
+                    <div id="hitokoto-container" class="max-w-xl text-center px-4 mb-8 h-16 flex flex-col justify-center">
+                        <p id="hitokoto" class="text-lg font-normal tracking-widest text-white italic drop-shadow-sm"></p>
+                        <p id="hitokoto-from" class="text-[11px] font-bold tracking-[0.3em] uppercase text-white/60 mt-2"></p>
                     </div>
                 </div>
 
@@ -544,8 +544,9 @@
                 textEl.innerText = data.hitokoto;
                 fromEl.innerText = `— ${data.from_who || ''} 「${data.from}」`;
                 
-                textEl.style.opacity = "0.6";
-                fromEl.style.opacity = "0.3";
+                // 已经由 HTML 类控制初始透明度，这里不再强制覆盖，或根据需要微调
+                textEl.style.opacity = "0.9";
+                fromEl.style.opacity = "0.6";
             } catch (err) {
                 console.error('Failed to fetch hitokoto:', err);
                 document.getElementById('hitokoto-container').style.display = 'none';
