@@ -175,6 +175,16 @@
             background: rgba(255, 255, 255, 0.1);
             border-color: rgba(255, 255, 255, 0.3);
         }
+        select.apple-input {
+            appearance: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+            color: white;
+        }
+        select.apple-input option {
+            background: #1c1c2e;
+            color: white;
+        }
     </style>
 </head>
 <body class="text-white animate-page">
@@ -362,6 +372,10 @@
                     <label class="text-[9px] uppercase tracking-[0.3em] font-black opacity-30 ml-4">链接地址</label>
                     <input type="text" id="bm-url" class="apple-input font-light" placeholder="https://...">
                 </div>
+                <div class="space-y-2">
+                    <label class="text-[9px] uppercase tracking-[0.3em] font-black opacity-30 ml-4">所属分组</label>
+                    <select id="bm-group" class="apple-input font-light"></select>
+                </div>
                 <div class="flex gap-4 pt-4">
                     <button onclick="closeBookmarkModal()" class="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 py-5 rounded-[2rem] transition-all text-[10px] uppercase tracking-widest font-black opacity-50 hover:opacity-100">取消</button>
                     <button id="bm-save-btn" onclick="saveBookmark()" class="flex-1 bg-white text-black font-black py-5 rounded-[2rem] hover:scale-[1.02] active:scale-[0.98] transition-all text-[10px] uppercase tracking-widest">确认保存</button>
@@ -378,6 +392,22 @@
             <div class="flex gap-4">
                 <button onclick="toggleModal('group-name-modal')" class="flex-1 bg-white/5 border border-white/10 py-5 rounded-[2rem] text-[10px] uppercase tracking-widest font-black opacity-50">取消</button>
                 <button onclick="confirmGroupName()" class="flex-1 bg-white text-black font-black py-5 rounded-[2rem] text-[10px] uppercase tracking-widest">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 删除分组确认 modal -->
+    <div id="delete-group-modal" class="modal">
+        <div class="apple-glass p-12 rounded-[4rem] max-w-md w-full relative modal-content">
+            <h3 id="del-group-title" class="text-2xl font-light mb-4 tracking-tight">删除分组</h3>
+            <p id="del-group-msg" class="text-sm opacity-50 mb-8 leading-relaxed font-light"></p>
+            <div id="del-group-move-section" class="space-y-2 mb-8 hidden">
+                <label class="text-[9px] uppercase tracking-[0.3em] font-black opacity-30 ml-4">书签移入</label>
+                <select id="del-group-target" class="apple-input font-light"></select>
+            </div>
+            <div class="flex gap-4">
+                <button onclick="toggleModal('delete-group-modal')" class="flex-1 bg-white/5 border border-white/10 py-5 rounded-[2rem] text-[10px] uppercase tracking-widest font-black opacity-50">取消</button>
+                <button onclick="executeDeleteGroup()" class="flex-1 bg-red-500/80 hover:bg-red-500 text-white font-black py-5 rounded-[2rem] text-[10px] uppercase tracking-widest transition-all">确认删除</button>
             </div>
         </div>
     </div>
@@ -485,6 +515,10 @@
         let groups = loadGroups();
         let currentGroupId = groups[0]?.id || null;
 
+        // 默认分组（工作/娱乐）只能重命名，不可删除
+        const PROTECTED_GROUP_IDS = new Set(['group-work', 'group-fun']);
+        function isGroupProtected(id) { return PROTECTED_GROUP_IDS.has(id); }
+
         let todos = JSON.parse(localStorage.getItem('todos_v7')) || [
             { id: 1, text: '开始设计第一稿', completed: false }
         ];
@@ -541,11 +575,19 @@
 
         let editingIndex = -1;
 
+        function populateBmGroupSelect(selectedId) {
+            const sel = document.getElementById('bm-group');
+            sel.innerHTML = groups.map(g =>
+                `<option value="${g.id}"${g.id === selectedId ? ' selected' : ''}>${g.name}</option>`
+            ).join('');
+        }
+
         function openAddModal() {
             editingIndex = -1;
             document.getElementById('bm-modal-title').innerText = "添加快捷方式";
             document.getElementById('bm-name').value = '';
             document.getElementById('bm-url').value = '';
+            populateBmGroupSelect(currentGroupId);
             toggleModal('bookmark-modal');
         }
 
@@ -555,6 +597,7 @@
             document.getElementById('bm-modal-title').innerText = "编辑快捷方式";
             document.getElementById('bm-name').value = bm.name;
             document.getElementById('bm-url').value = bm.url;
+            populateBmGroupSelect(currentGroupId);
             toggleModal('bookmark-modal');
         }
 
@@ -563,20 +606,38 @@
         }
 
         function saveBookmark() {
-            const name = document.getElementById('bm-name').value;
-            const url = document.getElementById('bm-url').value;
-            if(name && url) {
-                const formattedUrl = url.startsWith('http') ? url : 'https://' + url;
-                const bms = getCurrentBookmarks();
-                if (editingIndex > -1) {
-                    bms[editingIndex] = { ...bms[editingIndex], name, url: formattedUrl };
+            const name = document.getElementById('bm-name').value.trim();
+            const url = document.getElementById('bm-url').value.trim();
+            const targetGroupId = document.getElementById('bm-group').value;
+            if (!name || !url) return;
+            const formattedUrl = url.startsWith('http') ? url : 'https://' + url;
+            const targetGroup = groups.find(g => g.id === targetGroupId);
+            if (!targetGroup) return;
+
+            if (editingIndex > -1) {
+                const srcBms = getCurrentBookmarks();
+                const existing = srcBms[editingIndex];
+                if (targetGroupId !== currentGroupId) {
+                    // 跨分组移动：从源组删除，加入目标组
+                    srcBms.splice(editingIndex, 1);
+                    targetGroup.bookmarks.push({ ...existing, name, url: formattedUrl });
+                    // 源组页码越界修正
+                    const totalPages = Math.ceil((srcBms.length + 1) / 6);
+                    const page = getCurrentPage();
+                    if (page >= totalPages && page > 0) setCurrentPage(page - 1);
+                    currentGroupId = targetGroupId;
                 } else {
-                    bms.push({ name, url: formattedUrl, icon: 'globe' });
+                    srcBms[editingIndex] = { ...existing, name, url: formattedUrl };
                 }
-                saveGroups();
-                renderBookmarks();
-                closeBookmarkModal();
+            } else {
+                targetGroup.bookmarks.push({ name, url: formattedUrl, icon: 'globe' });
+                if (targetGroupId !== currentGroupId) currentGroupId = targetGroupId;
             }
+
+            saveGroups();
+            renderGroupTabs();
+            renderBookmarks();
+            closeBookmarkModal();
         }
 
         function deleteBookmark(index) {
@@ -670,7 +731,8 @@
             if (e) e.preventDefault();
             ctxGroupId = groupId;
             const menu = document.getElementById('group-ctx-menu');
-            document.getElementById('ctx-delete-btn').style.display = groups.length <= 1 ? 'none' : '';
+            const canDelete = groups.length > 1 && !isGroupProtected(groupId);
+            document.getElementById('ctx-delete-btn').style.display = canDelete ? '' : 'none';
             menu.classList.remove('hidden');
             const x = e ? e.clientX : refEl.getBoundingClientRect().left;
             const y = e ? e.clientY : refEl.getBoundingClientRect().bottom + 4;
@@ -684,11 +746,41 @@
 
         function confirmDeleteGroup() {
             hideGroupCtxMenu();
-            if (groups.length <= 1) return;
+            if (groups.length <= 1 || isGroupProtected(ctxGroupId)) return;
+            const grp = groups.find(g => g.id === ctxGroupId);
+            if (!grp) return;
+
+            document.getElementById('del-group-title').innerText = `删除「${grp.name}」`;
+            const moveSection = document.getElementById('del-group-move-section');
+            const targetSel = document.getElementById('del-group-target');
+
+            if (grp.bookmarks.length > 0) {
+                document.getElementById('del-group-msg').innerText =
+                    `该分组内有 ${grp.bookmarks.length} 个书签，删除后无法恢复。可将书签保留到其他分组。`;
+                targetSel.innerHTML = `<option value="">不保留书签</option>` +
+                    groups.filter(g => g.id !== ctxGroupId)
+                          .map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+                moveSection.classList.remove('hidden');
+            } else {
+                document.getElementById('del-group-msg').innerText =
+                    `确认删除分组「${grp.name}」？此操作不可撤销。`;
+                moveSection.classList.add('hidden');
+            }
+            toggleModal('delete-group-modal');
+        }
+
+        function executeDeleteGroup() {
+            const targetId = document.getElementById('del-group-target').value;
+            const grp = groups.find(g => g.id === ctxGroupId);
+            if (grp && targetId) {
+                const targetGroup = groups.find(g => g.id === targetId);
+                if (targetGroup) targetGroup.bookmarks.push(...grp.bookmarks);
+            }
             groups = groups.filter(g => g.id !== ctxGroupId);
             delete groupPages[ctxGroupId];
             saveGroups(); savePages();
             if (currentGroupId === ctxGroupId) currentGroupId = groups[0].id;
+            toggleModal('delete-group-modal');
             renderGroupTabs();
             renderBookmarks();
         }
@@ -971,7 +1063,7 @@
         }
 
         // 点击遮罩层关闭弹窗（点内容区域不关闭）
-        ['donate-modal', 'bookmark-modal', 'settings-modal', 'group-name-modal'].forEach((id) => {
+        ['donate-modal', 'bookmark-modal', 'settings-modal', 'group-name-modal', 'delete-group-modal'].forEach((id) => {
             const modal = document.getElementById(id);
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) toggleModal(id);
