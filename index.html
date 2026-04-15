@@ -524,6 +524,10 @@
         ];
 
         const itemsPerPage = 7; // 7个书签 + 1个添加按钮 = 8格（4列×2行）
+        // 始终保证有一个页面放添加按钮：页数 = ceil((书签数+1) / 每页数)
+        function getTotalPages(bms) {
+            return Math.max(1, Math.ceil((bms.length + 1) / itemsPerPage));
+        }
 
         // 每个分组独立记忆当前页，存入 localStorage
         let groupPages = JSON.parse(localStorage.getItem('shortcuts.pages')) || {};
@@ -539,7 +543,7 @@
             const bms = getCurrentBookmarks();
             const pageItems = bms.slice(start, end);
 
-            const totalPages = Math.max(1, Math.ceil((bms.length + 1) / (itemsPerPage + 1)));
+            const totalPages = getTotalPages(bms);
             document.getElementById('page-indicator').innerText = `${page + 1}/${totalPages}`;
 
             let html = pageItems.map((s, index) => {
@@ -622,7 +626,7 @@
                     srcBms.splice(editingIndex, 1);
                     targetGroup.bookmarks.push({ ...existing, name, url: formattedUrl });
                     // 源组页码越界修正
-                    const totalPages = Math.ceil((srcBms.length + 1) / (itemsPerPage + 1));
+                    const totalPages = getTotalPages(srcBms);
                     const page = getCurrentPage();
                     if (page >= totalPages && page > 0) setCurrentPage(page - 1);
                     currentGroupId = targetGroupId;
@@ -644,7 +648,7 @@
             const bms = getCurrentBookmarks();
             bms.splice(index, 1);
             saveGroups();
-            const totalPages = Math.ceil((bms.length + 1) / (itemsPerPage + 1));
+            const totalPages = getTotalPages(bms);
             const page = getCurrentPage();
             if (page >= totalPages && page > 0) setCurrentPage(page - 1);
             renderBookmarks();
@@ -657,7 +661,7 @@
 
         function nextPage() {
             const page = getCurrentPage();
-            const totalPages = Math.ceil((getCurrentBookmarks().length + 1) / (itemsPerPage + 1));
+            const totalPages = getTotalPages(getCurrentBookmarks());
             if (page < totalPages - 1) { setCurrentPage(page + 1); renderBookmarks(); }
         }
 
@@ -671,16 +675,6 @@
             html += `<button onclick="openNewGroupModal()" class="ml-auto flex-shrink-0 opacity-30 hover:opacity-70 transition-opacity p-1 rounded-lg hover:bg-white/10" title="新建分组"><i data-lucide="plus" class="w-3.5 h-3.5"></i></button>`;
             container.innerHTML = html;
             lucide.createIcons();
-
-            // 长按支持（移动端）
-            groups.forEach(g => {
-                const btn = container.querySelector(`[data-gid="${g.id}"]`);
-                if (!btn) return;
-                let timer;
-                btn.addEventListener('touchstart', () => { timer = setTimeout(() => showGroupCtxMenu(null, g.id, btn), 600); }, { passive: true });
-                btn.addEventListener('touchend', () => clearTimeout(timer));
-                btn.addEventListener('touchmove', () => clearTimeout(timer));
-            });
         }
 
         function switchGroup(id) {
@@ -954,29 +948,6 @@
             window.open(urls[currentEngine], '_blank');
         }
 
-        let pomoTime = 25 * 60;
-        let pomoInterval = null;
-        function togglePomo() {
-            const btn = document.getElementById('pomo-btn');
-            if(pomoInterval) {
-                clearInterval(pomoInterval); pomoInterval = null;
-                btn.innerText = "Resume";
-            } else {
-                pomoInterval = setInterval(() => {
-                    pomoTime--;
-                    const m = Math.floor(pomoTime / 60);
-                    const s = pomoTime % 60;
-                    document.getElementById('pomo-timer').innerText = `${m}:${s.toString().padStart(2, '0')}`;
-                    if(pomoTime <= 0) {
-                        clearInterval(pomoInterval);
-                        alert("专注完成！");
-                        pomoTime = 25 * 60;
-                        document.getElementById('pomo-timer').innerText = "25:00";
-                    }
-                }, 1000);
-                btn.innerText = "Pause";
-            }
-        }
 
         function setActiveBgModeUI(mode) {
             const btnUrl = document.getElementById('bg-mode-url');
@@ -1063,7 +1034,7 @@
         }
 
         // 点击遮罩层关闭弹窗（点内容区域不关闭）
-        ['donate-modal', 'bookmark-modal', 'settings-modal', 'group-name-modal', 'delete-group-modal'].forEach((id) => {
+        ['donate-modal', 'bookmark-modal', 'todo-modal', 'settings-modal', 'group-name-modal', 'delete-group-modal'].forEach((id) => {
             const modal = document.getElementById(id);
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) toggleModal(id);
@@ -1074,6 +1045,19 @@
         document.addEventListener('click', (e) => {
             if (!document.getElementById('group-ctx-menu').contains(e.target)) hideGroupCtxMenu();
         });
+
+        // 分组标签栏长按（移动端）— 容器委托，只绑定一次
+        (function () {
+            const container = document.getElementById('group-tabs');
+            let touchTimer;
+            container.addEventListener('touchstart', (e) => {
+                const btn = e.target.closest('[data-gid]');
+                if (!btn) return;
+                touchTimer = setTimeout(() => showGroupCtxMenu(null, btn.dataset.gid, btn), 600);
+            }, { passive: true });
+            container.addEventListener('touchend', () => clearTimeout(touchTimer));
+            container.addEventListener('touchmove', () => clearTimeout(touchTimer));
+        })();
 
         // 分组名称输入框回车确认
         document.getElementById('group-name-input').addEventListener('keydown', (e) => {
