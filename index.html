@@ -51,9 +51,39 @@
         .hover-lift { transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         .hover-lift:hover { transform: translateY(-8px); filter: brightness(1.2); }
 
-        .todo-item.completed span {
-            text-decoration: line-through;
-            opacity: 0.3;
+        /* 富文本工具栏 */
+        .toolbar {
+            display: flex;
+            gap: 0.5rem;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 0.75rem;
+            flex-wrap: wrap;
+        }
+        .toolbar-btn {
+            padding: 0.4rem;
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+            opacity: 0.5;
+        }
+        .toolbar-btn:hover {
+            opacity: 1;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .toolbar-btn.active {
+            opacity: 1;
+            background: rgba(255, 255, 255, 0.2);
+        }
+        .rich-editor {
+            flex: 1;
+            outline: none;
+            overflow-y: auto;
+            font-size: 0.875rem;
+            line-height: 1.6;
+        }
+        .rich-editor:empty:before {
+            content: attr(placeholder);
+            opacity: 0.2;
         }
 
         /* 页面载入动画 */
@@ -167,8 +197,22 @@
                     </div>
                 </div>
                 
-                <div id="pane-note" class="flex-1 flex flex-col">
-                    <textarea id="notepad" class="w-full flex-1 bg-transparent border-none outline-none text-sm resize-none leading-relaxed no-scrollbar placeholder:text-white/10 font-light" placeholder="Write something..."></textarea>
+                <div id="pane-note" class="flex-1 flex flex-col overflow-hidden">
+                    <div class="toolbar">
+                        <button onclick="formatDoc('bold')" class="toolbar-btn" title="加粗"><i data-lucide="bold" class="w-4 h-4"></i></button>
+                        <button onclick="formatDoc('italic')" class="toolbar-btn" title="斜体"><i data-lucide="italic" class="w-4 h-4"></i></button>
+                        <button onclick="formatDoc('underline')" class="toolbar-btn" title="下划线"><i data-lucide="underline" class="w-4 h-4"></i></button>
+                        <div class="w-px h-4 bg-white/10 my-auto mx-1"></div>
+                        <button onclick="formatDoc('fontSize', '5')" class="toolbar-btn" title="大字号"><i data-lucide="heading-1" class="w-4 h-4"></i></button>
+                        <button onclick="formatDoc('fontSize', '3')" class="toolbar-btn" title="中字号"><i data-lucide="heading-2" class="w-4 h-4"></i></button>
+                        <button onclick="formatDoc('fontSize', '2')" class="toolbar-btn" title="小字号"><i data-lucide="type" class="w-4 h-4"></i></button>
+                        <div class="w-px h-4 bg-white/10 my-auto mx-1"></div>
+                        <button onclick="formatDoc('justifyLeft')" class="toolbar-btn" title="左对齐"><i data-lucide="align-left" class="w-4 h-4"></i></button>
+                        <button onclick="formatDoc('justifyCenter')" class="toolbar-btn" title="居中"><i data-lucide="align-center" class="w-4 h-4"></i></button>
+                        <button onclick="formatDoc('foreColor', '#34d399')" class="toolbar-btn text-emerald-400" title="绿色字体"><i data-lucide="palette" class="w-4 h-4"></i></button>
+                        <button onclick="formatDoc('removeFormat')" class="toolbar-btn" title="清除格式"><i data-lucide="eraser" class="w-4 h-4"></i></button>
+                    </div>
+                    <div id="notepad" contenteditable="true" class="rich-editor no-scrollbar" placeholder="Start typing your thoughts..."></div>
                 </div>
                 
                 <div id="pane-todo" class="flex-1 hidden overflow-y-auto no-scrollbar space-y-3">
@@ -567,8 +611,13 @@
         });
 
         const np = document.getElementById('notepad');
-        np.value = localStorage.getItem('notes_v7') || '';
-        np.oninput = () => localStorage.setItem('notes_v7', np.value);
+        np.innerHTML = localStorage.getItem('notes_v7_rich') || '';
+        np.oninput = () => localStorage.setItem('notes_v7_rich', np.innerHTML);
+
+        function formatDoc(cmd, value = null) {
+            document.execCommand(cmd, false, value);
+            np.focus();
+        }
 
         function switchTab(tab) {
             const isNote = tab === 'note';
