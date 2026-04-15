@@ -524,9 +524,9 @@
         ];
 
         const itemsPerPage = 7; // 7个书签 + 1个添加按钮 = 8格（4列×2行）
-        // 始终保证有一个页面放添加按钮：页数 = ceil((书签数+1) / 每页数)
+        // 页数 = ceil(书签数 / 每页数)，最少 1 页；最后一页始终显示添加按钮
         function getTotalPages(bms) {
-            return Math.max(1, Math.ceil((bms.length + 1) / itemsPerPage));
+            return Math.max(1, Math.ceil(bms.length / itemsPerPage));
         }
 
         // 每个分组独立记忆当前页，存入 localStorage
@@ -561,8 +561,9 @@
                 </div>
             `}).join('');
 
-            // 如果当前页还没放满，或者当前页是最后一页且刚好放满，就显示添加按钮
-            if (pageItems.length < itemsPerPage) {
+            // 当前页未满，或当前页是最后一页（始终保留添加入口）
+            const isLastPage = (page + 1) >= totalPages;
+            if (pageItems.length < itemsPerPage || isLastPage) {
                 html += `
                     <button onclick="openAddModal()" class="flex flex-col items-center gap-2 group">
                         <div class="apple-glass w-[84px] h-[84px] mx-auto rounded-[1.2rem] flex items-center justify-center border-dashed border-white/10 hover:bg-white/10 transition-all">
