@@ -28,7 +28,10 @@
             box-shadow: 0 15px 50px -10px rgba(0, 0, 0, 0.4);
             /* 隔离合成层：修复 Chrome 多 backdrop-filter 面板动画时跨面板渲染串扰的蓝色方块 */
             isolation: isolate;
-            transform: translateZ(0);
+            transform: translate3d(0, 0, 0);
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            will-change: transform;
         }
 
         /* 背景层 */
