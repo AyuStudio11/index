@@ -42,9 +42,15 @@
             display: none; position: fixed; top: 0; left: 0;
             width: 100%; height: 100%;
             align-items: center; justify-content: center; z-index: 100;
-            backdrop-filter: blur(20px);
+            pointer-events: none; /* 允许穿透空白区域点击 */
         }
         .modal.active { display: flex; }
+        .modal > * { pointer-events: auto; }
+        /* 仅让弹出的面板带深色半透明底，页面其余区域不遮罩 */
+        .modal .apple-glass {
+            background: rgba(0, 0, 0, 0.55);
+            border-color: rgba(255, 255, 255, 0.12);
+        }
 
         .no-scrollbar::-webkit-scrollbar { display: none; }
         
@@ -57,7 +63,7 @@
 
         /* 宠物 PNG 容器 */
         .pet-wrap { width: 120px; height: 120px; display: inline-block; cursor: pointer; user-select: none; position: relative; --flip: 1; }
-        .pet-img { width: 100%; height: 100%; display: block; pointer-events: none; user-select: none; opacity: 1; transition: opacity 0.22s ease; background: transparent; -webkit-user-drag: none; object-fit: contain; transform: scaleX(var(--flip)); }
+        .pet-img { width: 100%; height: 100%; display: block; pointer-events: none; user-select: none; opacity: 1; transition: opacity 0.08s ease; background: transparent; -webkit-user-drag: none; object-fit: contain; transform: scaleX(var(--flip)); }
         .pet-wrap.facing-left { --flip: -1; }
 
         /* 各状态 keyframe 动画 —— 动画里复用 scaleX(var(--flip)) 以同时兼容镜像 */
@@ -84,12 +90,26 @@
             0%, 100% { transform: scale(1) scaleX(var(--flip)); }
             50% { transform: scale(0.97) scaleX(var(--flip)); }
         }
+        @keyframes petWakeShake {
+            0%, 100% { transform: translateX(0)   scaleX(var(--flip)); }
+            20%      { transform: translateX(-4px) scaleX(var(--flip)); }
+            40%      { transform: translateX( 4px) scaleX(var(--flip)); }
+            60%      { transform: translateX(-4px) scaleX(var(--flip)); }
+            80%      { transform: translateX( 4px) scaleX(var(--flip)); }
+        }
+        @keyframes petWakePop {
+            0%   { transform: scale(0.8) scaleX(var(--flip)); }
+            60%  { transform: scale(1.1) scaleX(var(--flip)); }
+            100% { transform: scale(1)   scaleX(var(--flip)); }
+        }
         .pet-wrap.state-idle      .pet-img { animation: petStateIdle 3s ease-in-out infinite; }
         .pet-wrap.state-happy     .pet-img { animation: petStateHappy 0.5s ease-in-out 2; }
         .pet-wrap.state-celebrate .pet-img { animation: petStateCelebrate 0.5s ease-in-out 3; }
         .pet-wrap.state-sad       .pet-img { animation: petStateSad 4s ease-in-out infinite; }
         .pet-wrap.state-sleeping  .pet-img { animation: petStateSleeping 4s ease-in-out infinite; }
         .pet-wrap.state-yawning   .pet-img { animation: petStateIdle 3s ease-in-out infinite; }
+        .pet-wrap.waking-shake    .pet-img { animation: petWakeShake 0.3s ease-in-out !important; }
+        .pet-wrap.waking-pop      .pet-img { animation: petWakePop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) !important; }
         /* dragged 状态无 keyframe —— 位置由 JS pointermove 设置 left/top 直接跟随光标 */
 
         /* 投喂食物图标 */
@@ -104,7 +124,8 @@
 
         /* 拖拽 */
         .pet-wrap.dragging { transition: none !important; cursor: grabbing; z-index: 9999; }
-        .pet-wrap.pinned { position: fixed !important; z-index: 9998; }
+        /* 用 absolute 而非 fixed，避免被祖先 backdrop-filter / transform 劫持为包含块导致拖拽时定位错乱 */
+        .pet-wrap.pinned { position: absolute !important; z-index: 9998; }
         .pet-wrap { transition: left 4.8s cubic-bezier(0.45, 0, 0.25, 1), top 4.8s cubic-bezier(0.45, 0, 0.25, 1); }
         .pet-onboard-card.selected { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.4); transform: translateY(-2px); }
         .pet-onboard-svg img { width: 100%; height: 100%; display: block; object-fit: contain; }
@@ -190,10 +211,59 @@
         }
         .group-tab:hover { opacity: 0.65; background: rgba(255,255,255,0.08); }
         .group-tab.active { opacity: 1; background: rgba(255,255,255,0.15); }
+        .group-tab.bm-drop-target {
+            opacity: 1;
+            background: rgba(255,255,255,0.22);
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.5);
+        }
+        .group-tab[contenteditable="true"] {
+            outline: none;
+            user-select: text;
+            background: rgba(255,255,255,0.12);
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.25);
+        }
         .rich-editor:empty:before {
             content: attr(placeholder);
             opacity: 0.2;
         }
+        /* 任务长按完成 —— 涨水动画 */
+        .todo-check { touch-action: none; }
+        .todo-check-fill {
+            position: absolute;
+            left: 0; right: 0; bottom: 0;
+            height: 0%;
+            background: rgba(16, 185, 129, 0.75);
+            pointer-events: none;
+            transition: height 0s;
+        }
+        .todo-check.holding .todo-check-fill {
+            height: 100%;
+            transition: height 1.5s linear;
+        }
+        /* 已完成状态：水位默认 100%，按住时缓慢下降 */
+        .todo-check.done .todo-check-fill {
+            height: 100%;
+            background: rgb(16, 185, 129);
+        }
+        .todo-check.done.holding .todo-check-fill {
+            height: 0%;
+            transition: height 1.5s linear;
+        }
+        /* 书签拖拽插入指示线 */
+        .bookmark-tile { position: relative; }
+        .bookmark-tile.bm-drop-before::before,
+        .bookmark-tile.bm-drop-after::after {
+            content: '';
+            position: absolute;
+            top: 8px;
+            bottom: 28px;
+            width: 2px;
+            background: rgba(255,255,255,0.55);
+            border-radius: 1px;
+            pointer-events: none;
+        }
+        .bookmark-tile.bm-drop-before::before { left: -4px; }
+        .bookmark-tile.bm-drop-after::after   { right: -4px; }
 
         /* 页面载入动画 */
         @keyframes fadeIn {
@@ -513,8 +583,14 @@
                         </div>
                     </div>
                 </div>
-                <div class="flex-1 flex flex-col overflow-hidden relative">
-                    <div id="notepad" contenteditable="true" class="rich-editor no-scrollbar" placeholder="开始记录你的想法..."></div>
+                <div class="flex-1 flex gap-2 min-h-0 relative">
+                    <div id="notepad" contenteditable="true" class="flex-1 min-w-0 rich-editor no-scrollbar" placeholder="开始记录你的想法..."></div>
+                    <!-- 竖向滚动（UI 复用 SHORTCUTS 分页样式） -->
+                    <div class="flex flex-col items-center justify-center gap-1.5 opacity-0 group-hover/note:opacity-40 transition-opacity flex-shrink-0">
+                        <button onclick="scrollNoteUp()" class="hover:opacity-100 transition-opacity"><i data-lucide="chevron-up" class="w-4 h-4"></i></button>
+                        <span id="note-scroll-indicator" class="text-[10px] font-black leading-none">1/1</span>
+                        <button onclick="scrollNoteDown()" class="hover:opacity-100 transition-opacity"><i data-lucide="chevron-down" class="w-4 h-4"></i></button>
+                    </div>
                     <!-- 自动保存提示 -->
                     <div id="note-saved-tip" class="absolute bottom-0 right-0 text-[9px] opacity-0 tracking-[0.25em] font-black uppercase pointer-events-none" style="transition: opacity 0.5s;">已保存</div>
                 </div>
@@ -675,7 +751,7 @@
 
     <!-- 分组右键/长按菜单 -->
     <div id="group-ctx-menu" class="hidden fixed z-50 apple-glass rounded-2xl p-2 shadow-xl min-w-[120px]">
-        <button onclick="openRenameGroupModal()" class="w-full text-left px-3 py-2 text-[11px] uppercase tracking-[0.08em] font-bold rounded-xl hover:bg-white/10 transition-all">重命名</button>
+        <button onclick="startRenameGroupFromCtx()" class="w-full text-left px-3 py-2 text-[11px] uppercase tracking-[0.08em] font-bold rounded-xl hover:bg-white/10 transition-all">重命名</button>
         <button id="ctx-delete-btn" onclick="confirmDeleteGroup()" class="w-full text-left px-3 py-2 text-[11px] uppercase tracking-[0.08em] font-bold rounded-xl hover:bg-red-500/20 text-red-300 transition-all">删除</button>
     </div>
 
@@ -683,6 +759,13 @@
     <div id="note-ctx-menu" class="hidden fixed z-50 apple-glass rounded-2xl p-2 shadow-xl min-w-[120px]">
         <button onclick="startRenameNoteFromCtx()" class="w-full text-left px-3 py-2 text-[11px] uppercase tracking-[0.08em] font-bold rounded-xl hover:bg-white/10 transition-all">重命名</button>
         <button id="note-ctx-delete-btn" onclick="confirmDeleteNote()" class="w-full text-left px-3 py-2 text-[11px] uppercase tracking-[0.08em] font-bold rounded-xl hover:bg-red-500/20 text-red-300 transition-all">删除</button>
+    </div>
+
+    <!-- 待办优先级选择菜单 -->
+    <div id="todo-priority-menu" class="hidden fixed z-50 apple-glass rounded-2xl p-2 shadow-xl min-w-[110px]">
+        <button onclick="changeTodoPriority('high')" class="w-full text-left px-3 py-2 text-[11px] uppercase tracking-[0.08em] font-bold rounded-xl hover:bg-white/10 transition-all flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>高</button>
+        <button onclick="changeTodoPriority('medium')" class="w-full text-left px-3 py-2 text-[11px] uppercase tracking-[0.08em] font-bold rounded-xl hover:bg-white/10 transition-all flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>中</button>
+        <button onclick="changeTodoPriority('low')" class="w-full text-left px-3 py-2 text-[11px] uppercase tracking-[0.08em] font-bold rounded-xl hover:bg-white/10 transition-all flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-sky-400"></span>低</button>
     </div>
 
     <!-- 重置宠物确认 modal -->
@@ -759,7 +842,11 @@
                 </div>
 
                 <div id="bg-pane-local" class="space-y-4 hidden">
-                    <input type="file" id="bg-file" accept="image/*" class="w-full bg-white/5 border border-white/20 rounded-2xl p-5 outline-none font-light">
+                    <input type="file" id="bg-file" accept="image/*" class="hidden" onchange="updateBgFileLabel()">
+                    <button type="button" onclick="document.getElementById('bg-file').click()" class="w-full bg-white/5 border border-white/20 rounded-2xl p-5 outline-none font-light text-[11px] uppercase tracking-[0.2em] hover:bg-white/10 transition-all flex items-center justify-center gap-3">
+                        <i data-lucide="image" class="w-4 h-4 opacity-60"></i>
+                        <span id="bg-file-label" class="opacity-70 truncate">选择本地图片</span>
+                    </button>
                     <button onclick="applyBgFromLocal()" class="w-full bg-white text-black font-black py-5 rounded-[2.5rem]">应用本地壁纸</button>
                     <p class="text-[10px] opacity-40 tracking-[0.25em] uppercase font-black">提示：本地图片会以数据形式保存在浏览器里</p>
                 </div>
@@ -854,9 +941,7 @@
         let groups = loadGroups();
         let currentGroupId = groups[0]?.id || null;
 
-        // 默认分组（工作/娱乐）只能重命名，不可删除
-        const PROTECTED_GROUP_IDS = new Set(['group-work', 'group-fun']);
-        function isGroupProtected(id) { return PROTECTED_GROUP_IDS.has(id); }
+        // 所有分组均可删除（只要不是最后一个）
 
         // ===== 待办系统 =====
         const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
@@ -885,12 +970,13 @@
         let currentTodoPriority = 'medium';
         let todoDragSrcId = null;
 
-        // 书签网格：动态列数，每页 2 行；cols * 2 - 1 = 书签数（最后一格留给添加按钮）
+        // 书签网格：动态列数，每页 2 行；每页填满 cols * 2 个书签后翻下一页
         let currentCols = 4;
-        let currentItemsPerPage = 7; // 初始值对应 4 列
+        let currentItemsPerPage = 8; // 初始值对应 4 列
 
         function getTotalPages(bms) {
-            return Math.max(1, Math.ceil(bms.length / currentItemsPerPage));
+            // +1 为「添加」按钮预留位置：若当前总数正好填满整数页，再多出一页用于添加
+            return Math.max(1, Math.ceil((bms.length + 1) / currentItemsPerPage));
         }
 
         // 每个分组独立记忆当前页，存入 localStorage
@@ -914,12 +1000,18 @@
             let html = pageItems.map((s, index) => {
                 const globalIndex = start + index;
                 return `
-                <div class="flex flex-col items-center gap-2 group relative">
+                <div class="bookmark-tile flex flex-col items-center gap-2 group relative" data-bm-idx="${globalIndex}"
+                     draggable="true"
+                     ondragstart="onBmDragStart(event, ${globalIndex})"
+                     ondragover="onBmDragOver(event, ${globalIndex})"
+                     ondragleave="onBmDragLeave(event)"
+                     ondrop="onBmDrop(event, ${globalIndex})"
+                     ondragend="onBmDragEnd()">
                     <div class="absolute -top-2 -right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-all z-10">
                         <button onclick="editBookmark(${globalIndex})" class="bg-white/20 backdrop-blur-md rounded-full p-1.5 hover:bg-white/40"><i data-lucide="edit-2" class="w-3 h-3"></i></button>
                         <button onclick="deleteBookmark(${globalIndex})" class="bg-red-500/60 backdrop-blur-md rounded-full p-1.5 hover:bg-red-600/80"><i data-lucide="x" class="w-3 h-3"></i></button>
                     </div>
-                    <a href="${s.url}" target="_blank" class="apple-glass w-[84px] h-[84px] mx-auto rounded-[1.2rem] flex items-center justify-center hover-lift group-hover:bg-white/30 shadow-sm">
+                    <a href="${s.url}" target="_blank" draggable="false" class="apple-glass w-[84px] h-[84px] mx-auto rounded-[1.2rem] flex items-center justify-center hover-lift group-hover:bg-white/30 shadow-sm">
                         <i data-lucide="${s.icon || 'link-2'}" class="w-6 h-6 opacity-70"></i>
                     </a>
                     <span class="text-[12px] opacity-30 group-hover:opacity-100 tracking-[0.1em] font-bold uppercase truncate w-full text-center transition-opacity">${s.name}</span>
@@ -934,7 +1026,6 @@
                         <div class="apple-glass w-[84px] h-[84px] mx-auto rounded-[1.2rem] flex items-center justify-center border-dashed border-white/10 hover:bg-white/10 transition-all">
                             <i data-lucide="plus" class="w-5 h-5 opacity-20 group-hover:opacity-50"></i>
                         </div>
-                        <span class="text-[8px] opacity-10 tracking-[0.1em] uppercase font-bold text-center group-hover:opacity-30">Add</span>
                     </button>
                 `;
             }
@@ -951,7 +1042,7 @@
             if (!wrapper) return;
             const availableWidth = wrapper.clientWidth;
             const newCols = Math.max(1, Math.floor(availableWidth / 100));
-            const newPerPage = newCols * 2 - 1;
+            const newPerPage = newCols * 2;
             if (newCols !== currentCols || newPerPage !== currentItemsPerPage) {
                 currentCols = newCols;
                 currentItemsPerPage = newPerPage;
@@ -1037,6 +1128,93 @@
             renderBookmarks();
         }
 
+        // ===== 书签拖拽排序 =====
+        let bmDragSrcIdx = -1;
+        let bmDragSrcGroupId = null;
+        const _bmEmptyDragImg = (() => {
+            const img = new Image();
+            img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+            return img;
+        })();
+        function onBmDragStart(e, idx) {
+            bmDragSrcIdx = idx;
+            bmDragSrcGroupId = currentGroupId;
+            e.dataTransfer.effectAllowed = 'move';
+            try { e.dataTransfer.setData('text/plain', String(idx)); } catch(_) {}
+            try { e.dataTransfer.setDragImage(_bmEmptyDragImg, 0, 0); } catch(_) {}
+            setTimeout(() => {
+                const el = document.querySelector(`.bookmark-tile[data-bm-idx="${idx}"]`);
+                if (el) el.style.opacity = '0.3';
+            }, 0);
+        }
+        function onBmDragOver(e, idx) {
+            e.preventDefault();
+            if (idx === bmDragSrcIdx || bmDragSrcIdx < 0) return;
+            document.querySelectorAll('.bookmark-tile').forEach(el => el.classList.remove('bm-drop-before','bm-drop-after'));
+            const el = document.querySelector(`.bookmark-tile[data-bm-idx="${idx}"]`);
+            if (el) {
+                const mid = el.getBoundingClientRect().left + el.getBoundingClientRect().width / 2;
+                el.classList.add(e.clientX < mid ? 'bm-drop-before' : 'bm-drop-after');
+            }
+        }
+        function onBmDragLeave(e) { /* 由 dragover 的清除处理 */ }
+        function onBmDrop(e, targetIdx) {
+            e.preventDefault();
+            if (bmDragSrcIdx < 0 || bmDragSrcIdx === targetIdx) return;
+            const bms = getCurrentBookmarks();
+            if (bmDragSrcIdx >= bms.length || targetIdx >= bms.length) return;
+            const el = document.querySelector(`.bookmark-tile[data-bm-idx="${targetIdx}"]`);
+            let before = true;
+            if (el) {
+                const mid = el.getBoundingClientRect().left + el.getBoundingClientRect().width / 2;
+                before = e.clientX < mid;
+            }
+            const [item] = bms.splice(bmDragSrcIdx, 1);
+            const adjustedTarget = bmDragSrcIdx < targetIdx ? targetIdx - 1 : targetIdx;
+            const insertAt = before ? adjustedTarget : adjustedTarget + 1;
+            bms.splice(insertAt, 0, item);
+            saveGroups();
+            renderBookmarks();
+        }
+        function onBmDragEnd() {
+            document.querySelectorAll('.bookmark-tile').forEach(el => {
+                el.style.opacity = '';
+                el.classList.remove('bm-drop-before','bm-drop-after');
+            });
+            document.querySelectorAll('.group-tab').forEach(el => el.classList.remove('bm-drop-target'));
+            bmDragSrcIdx = -1;
+            bmDragSrcGroupId = null;
+        }
+
+        // 拖到分组标签 —— 跨组移动
+        function onGroupTabDragOver(e, gid) {
+            if (bmDragSrcIdx < 0) return;
+            if (gid === bmDragSrcGroupId) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            e.currentTarget.classList.add('bm-drop-target');
+        }
+        function onGroupTabDragLeave(e) {
+            e.currentTarget.classList.remove('bm-drop-target');
+        }
+        function onGroupTabDrop(e, gid) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('bm-drop-target');
+            if (bmDragSrcIdx < 0 || !bmDragSrcGroupId || gid === bmDragSrcGroupId) return;
+            const srcGroup = groups.find(g => g.id === bmDragSrcGroupId);
+            const tgtGroup = groups.find(g => g.id === gid);
+            if (!srcGroup || !tgtGroup) return;
+            if (bmDragSrcIdx >= srcGroup.bookmarks.length) return;
+            const [item] = srcGroup.bookmarks.splice(bmDragSrcIdx, 1);
+            tgtGroup.bookmarks.push(item);
+            // 源组页码越界修正
+            const srcTotal = getTotalPages(srcGroup.bookmarks);
+            const srcPage = groupPages[bmDragSrcGroupId] || 0;
+            if (srcPage >= srcTotal && srcPage > 0) groupPages[bmDragSrcGroupId] = srcPage - 1;
+            saveGroups(); savePages();
+            renderBookmarks();
+        }
+
         function prevPage() {
             const page = getCurrentPage();
             if (page > 0) { setCurrentPage(page - 1); renderBookmarks(); }
@@ -1053,7 +1231,7 @@
             const container = document.getElementById('group-tabs');
             let html = groups.map(g => {
                 const active = g.id === currentGroupId ? ' active' : '';
-                return `<button class="group-tab${active}" onclick="switchGroup('${g.id}')" oncontextmenu="showGroupCtxMenu(event,'${g.id}')" data-gid="${g.id}">${g.name}</button>`;
+                return `<button id="group-tab-${g.id}" class="group-tab${active}" onclick="switchGroup('${g.id}')" ondblclick="startRenameGroup('${g.id}', event)" oncontextmenu="showGroupCtxMenu(event,'${g.id}')" ondragover="onGroupTabDragOver(event,'${g.id}')" ondragleave="onGroupTabDragLeave(event)" ondrop="onGroupTabDrop(event,'${g.id}')" data-gid="${g.id}">${g.name}</button>`;
             }).join('');
             html += `<button onclick="openNewGroupModal()" class="ml-auto flex-shrink-0 opacity-30 hover:opacity-70 transition-opacity p-1 rounded-lg hover:bg-white/10" title="新建分组"><i data-lucide="plus" class="w-3.5 h-3.5"></i></button>`;
             container.innerHTML = html;
@@ -1067,23 +1245,11 @@
         }
 
         // ===== 新建 / 重命名分组 =====
-        let groupModalMode = 'create';
         let ctxGroupId = null;
 
         function openNewGroupModal() {
-            groupModalMode = 'create';
             document.getElementById('group-modal-title').innerText = '新建分组';
             document.getElementById('group-name-input').value = '';
-            toggleModal('group-name-modal');
-            setTimeout(() => document.getElementById('group-name-input').focus(), 100);
-        }
-
-        function openRenameGroupModal() {
-            hideGroupCtxMenu();
-            groupModalMode = 'rename';
-            document.getElementById('group-modal-title').innerText = '重命名分组';
-            const g = groups.find(g => g.id === ctxGroupId);
-            document.getElementById('group-name-input').value = g ? g.name : '';
             toggleModal('group-name-modal');
             setTimeout(() => document.getElementById('group-name-input').focus(), 100);
         }
@@ -1091,16 +1257,45 @@
         function confirmGroupName() {
             const name = document.getElementById('group-name-input').value.trim();
             if (!name) return;
-            if (groupModalMode === 'create') {
-                const id = 'group-' + Date.now();
-                groups.push({ id, name, bookmarks: [] });
-                saveGroups();
-                switchGroup(id);
-            } else {
-                const g = groups.find(g => g.id === ctxGroupId);
-                if (g) { g.name = name; saveGroups(); renderGroupTabs(); }
-            }
+            const id = 'group-' + Date.now();
+            groups.push({ id, name, bookmarks: [] });
+            saveGroups();
+            switchGroup(id);
             toggleModal('group-name-modal');
+        }
+
+        // --- 分组双击/右键重命名（在位编辑，仿笔记）---
+        function startRenameGroup(id, e) {
+            if (e && e.stopPropagation) e.stopPropagation();
+            const tab = document.getElementById('group-tab-' + id);
+            const grp = groups.find(g => g.id === id);
+            if (!tab || !grp) return;
+            const oldName = grp.name;
+            tab.contentEditable = 'true';
+            tab.focus();
+            const range = document.createRange();
+            range.selectNodeContents(tab);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+            const finish = () => {
+                tab.contentEditable = 'false';
+                const newName = tab.innerText.trim() || oldName;
+                grp.name = newName;
+                tab.innerText = newName;
+                saveGroups();
+            };
+            tab.onblur = finish;
+            tab.onkeydown = (ev) => {
+                if (ev.key === 'Enter') { ev.preventDefault(); tab.blur(); }
+                if (ev.key === 'Escape') { tab.innerText = oldName; tab.onblur = null; tab.blur(); }
+            };
+        }
+
+        function startRenameGroupFromCtx() {
+            hideGroupCtxMenu();
+            const id = ctxGroupId;
+            setTimeout(() => startRenameGroup(id, null), 50);
         }
 
         // ===== 右键 / 长按菜单 =====
@@ -1108,7 +1303,7 @@
             if (e) e.preventDefault();
             ctxGroupId = groupId;
             const menu = document.getElementById('group-ctx-menu');
-            const canDelete = groups.length > 1 && !isGroupProtected(groupId);
+            const canDelete = groups.length > 1;
             document.getElementById('ctx-delete-btn').style.display = canDelete ? '' : 'none';
             menu.classList.remove('hidden');
             const x = e ? e.clientX : refEl.getBoundingClientRect().left;
@@ -1123,7 +1318,7 @@
 
         function confirmDeleteGroup() {
             hideGroupCtxMenu();
-            if (groups.length <= 1 || isGroupProtected(ctxGroupId)) return;
+            if (groups.length <= 1) return;
             const grp = groups.find(g => g.id === ctxGroupId);
             if (!grp) return;
 
@@ -1194,16 +1389,25 @@
         function buildTodoItemHtml(t, isDone) {
             const dueSoon = !isDone && isDueSoon(t.dueDate);
             const dotColor = { high: 'bg-red-500', medium: 'bg-amber-400', low: 'bg-sky-400' }[t.priority] || 'bg-white/30';
-            const priorityDot = isDone ? '' : `<div class="w-1.5 h-1.5 rounded-full ${dotColor} flex-shrink-0 mt-[6px]"></div>`;
+            const priorityDot = isDone ? '' : `<button onclick="showTodoPriorityMenu(event, '${t.id}')" class="w-1.5 h-1.5 rounded-full ${dotColor} flex-shrink-0 mt-[6px] cursor-pointer hover:scale-150 transition-transform" title="修改优先级"></button>`;
             const dueDateHtml = (t.dueDate && !isDone) ? `<span class="block text-[9px] font-black tracking-widest mt-0.5 ${dueSoon ? 'text-orange-400' : 'opacity-30'}">${new Date(t.dueDate).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' })}</span>` : '';
             const dragAttrs = isDone ? '' : `draggable="true" ondragstart="onTodoDragStart(event,'${t.id}')" ondragover="onTodoDragOver(event,'${t.id}')" ondragleave="onTodoDragLeave(event)" ondrop="onTodoDrop(event,'${t.id}')" ondragend="onTodoDragEnd()"`;
             const highBorder = (t.priority === 'high' && !isDone) ? 'border-l-2 border-red-500/60' : '';
             return `<div class="todo-item flex items-start justify-between gap-2 group/item px-3 py-2.5 rounded-2xl hover:bg-white/5 transition-all ${isDone ? 'opacity-50' : ''} ${highBorder}" data-id="${t.id}" ${dragAttrs}>
                 <div class="flex items-start gap-2.5 flex-1 min-w-0">
                     ${priorityDot}
-                    <div class="w-5 h-5 rounded-full border border-white/20 flex items-center justify-center flex-shrink-0 mt-[1px] transition-all cursor-pointer ${isDone ? 'bg-emerald-500 border-transparent shadow-[0_0_10px_rgba(16,185,129,0.4)]' : 'group-hover/item:border-white/50'}" onclick="toggleTodo('${t.id}')">
-                        ${isDone ? '<i data-lucide="check" class="w-3 h-3 text-white"></i>' : ''}
-                    </div>
+                    ${isDone
+                        ? `<div class="todo-check done w-5 h-5 rounded-full border border-transparent flex items-center justify-center flex-shrink-0 mt-[1px] transition-all cursor-pointer relative overflow-hidden shadow-[0_0_10px_rgba(16,185,129,0.4)]"
+                               onpointerdown="startHoldComplete(event, '${t.id}')"
+                               onpointerup="cancelHoldComplete(event)"
+                               onpointerleave="cancelHoldComplete(event)"
+                               onpointercancel="cancelHoldComplete(event)"><span class="todo-check-fill"></span><i data-lucide="check" class="w-3 h-3 text-white relative"></i></div>`
+                        : `<div class="todo-check w-5 h-5 rounded-full border border-white/20 flex items-center justify-center flex-shrink-0 mt-[1px] transition-all cursor-pointer relative overflow-hidden group-hover/item:border-white/50"
+                               onpointerdown="startHoldComplete(event, '${t.id}')"
+                               onpointerup="cancelHoldComplete(event)"
+                               onpointerleave="cancelHoldComplete(event)"
+                               onpointercancel="cancelHoldComplete(event)"><span class="todo-check-fill"></span></div>`
+                    }
                     <div class="flex-1 min-w-0">
                         <span class="todo-text text-sm font-light tracking-wide leading-snug cursor-text outline-none ${isDone ? 'line-through opacity-60' : 'opacity-80'}" onclick="startEditTodo('${t.id}', event)">${t.text}</span>
                         ${dueDateHtml}
@@ -1214,6 +1418,36 @@
                 </button>
             </div>`;
         }
+
+        // --- 点击优先级小点弹出菜单 ---
+        let priorityMenuTodoId = null;
+        function showTodoPriorityMenu(e, id) {
+            e.stopPropagation();
+            priorityMenuTodoId = id;
+            const menu = document.getElementById('todo-priority-menu');
+            menu.classList.remove('hidden');
+            const rect = e.currentTarget.getBoundingClientRect();
+            const menuW = 110;
+            const x = Math.min(rect.left, window.innerWidth - menuW - 8);
+            const y = rect.bottom + 6;
+            menu.style.left = x + 'px';
+            menu.style.top = y + 'px';
+        }
+        function hideTodoPriorityMenu() {
+            document.getElementById('todo-priority-menu').classList.add('hidden');
+            priorityMenuTodoId = null;
+        }
+        function changeTodoPriority(level) {
+            const t = todos.find(t => t.id === priorityMenuTodoId);
+            hideTodoPriorityMenu();
+            if (!t || t.priority === level) return;
+            t.priority = level;
+            saveTodos();
+            renderTodos();
+        }
+        document.addEventListener('click', (e) => {
+            if (!document.getElementById('todo-priority-menu').contains(e.target)) hideTodoPriorityMenu();
+        });
 
         function renderTodos() {
             const active = todos.filter(t => !t.completed);
@@ -1343,6 +1577,40 @@
             }
             saveTodos();
             renderTodos();
+        }
+
+        // 长按切换完成状态：按住 1.5s 触发翻转，松开/移出即取消
+        // 未完成 → 水位 0%→100% 涨起；已完成 → 水位 100%→0% 回落
+        let _holdTodoTimer = null;
+        let _holdTodoEl = null;
+        function startHoldComplete(e, id) {
+            e.preventDefault();
+            const circle = e.currentTarget;
+            cancelHoldComplete();
+            _holdTodoEl = circle;
+            circle.classList.add('holding');
+            try { circle.setPointerCapture(e.pointerId); } catch(_) {}
+            _holdTodoTimer = setTimeout(() => {
+                _holdTodoTimer = null;
+                if (_holdTodoEl) _holdTodoEl.classList.remove('holding');
+                _holdTodoEl = null;
+                const t = todos.find(x => x.id === id);
+                if (!t) return;
+                const willComplete = !t.completed;
+                t.completed = willComplete;
+                t.completedAt = willComplete ? Date.now() : null;
+                if (willComplete) {
+                    archiveCompleted(t);
+                    if (typeof changePetMood === 'function') { changePetMood(+1); touchPetInteract(); }
+                    document.dispatchEvent(new CustomEvent('pet:celebrate', { detail: { duration: 1500 } }));
+                }
+                saveTodos();
+                renderTodos();
+            }, 1500);
+        }
+        function cancelHoldComplete() {
+            if (_holdTodoTimer) { clearTimeout(_holdTodoTimer); _holdTodoTimer = null; }
+            if (_holdTodoEl) { _holdTodoEl.classList.remove('holding'); _holdTodoEl = null; }
         }
 
         function deleteTodoById(id) {
@@ -1753,6 +2021,16 @@
             toggleModal('settings-modal');
         }
 
+        function updateBgFileLabel() {
+            const input = document.getElementById('bg-file');
+            const label = document.getElementById('bg-file-label');
+            if (!input || !label) return;
+            const f = input.files && input.files[0];
+            label.innerText = f ? f.name : '选择本地图片';
+            label.classList.toggle('opacity-70', !f);
+            label.classList.toggle('opacity-100', !!f);
+        }
+
         function applyBgFromLocal() {
             const input = document.getElementById('bg-file');
             const file = input.files && input.files[0];
@@ -1868,6 +2146,7 @@
             const note = getCurrentNote();
             document.getElementById('notepad').innerHTML = note ? note.content : '';
             renderNoteTabs();
+            updateNoteScrollIndicator();
         }
 
         function flushNoteContent() {
@@ -1881,6 +2160,30 @@
         function onNoteInput() {
             clearTimeout(noteSaveTimer);
             noteSaveTimer = setTimeout(() => { flushNoteContent(); showNoteSavedTip(); }, 500);
+            updateNoteScrollIndicator();
+        }
+
+        // ===== 笔记竖向滚动（UI 仿 SHORTCUTS 分页）=====
+        function scrollNoteUp() {
+            const np = document.getElementById('notepad');
+            if (!np) return;
+            np.scrollBy({ top: -Math.max(40, np.clientHeight * 0.85), behavior: 'smooth' });
+        }
+        function scrollNoteDown() {
+            const np = document.getElementById('notepad');
+            if (!np) return;
+            np.scrollBy({ top: Math.max(40, np.clientHeight * 0.85), behavior: 'smooth' });
+        }
+        function updateNoteScrollIndicator() {
+            const np = document.getElementById('notepad');
+            const ind = document.getElementById('note-scroll-indicator');
+            if (!np || !ind) return;
+            const total = Math.max(1, Math.ceil(np.scrollHeight / Math.max(1, np.clientHeight)));
+            if (total <= 1) { ind.innerText = '1/1'; return; }
+            const maxScroll = np.scrollHeight - np.clientHeight;
+            const ratio = maxScroll > 0 ? np.scrollTop / maxScroll : 0;
+            const current = Math.min(total, Math.max(1, Math.round(1 + ratio * (total - 1))));
+            ind.innerText = `${current}/${total}`;
         }
 
         function showNoteSavedTip() {
@@ -1983,7 +2286,9 @@
         const np = document.getElementById('notepad');
         np.innerHTML = getCurrentNote()?.content || '';
         np.oninput = onNoteInput;
+        np.addEventListener('scroll', updateNoteScrollIndicator, { passive: true });
         renderNoteTabs();
+        updateNoteScrollIndicator();
 
         function formatDoc(cmd, value = null) {
             document.execCommand(cmd, false, value);
@@ -2199,6 +2504,7 @@
         let _petCheeringOffTimer = null;
         // 打字中 → focused；停止打字 3 秒后回到默认
         document.addEventListener('pet:input-active', e => {
+            if (petLoadSleep) return;
             const on = !!(e.detail && e.detail.on);
             clearTimeout(_petFocusedOffTimer);
             if (on) {
@@ -2209,10 +2515,12 @@
         });
         // 完成 Todo → 庆祝 1.5 秒（由 dispatch 方指定 duration，默认 1500ms）
         document.addEventListener('pet:celebrate', e => {
+            if (petLoadSleep) return;
             triggerCelebrate((e.detail && e.detail.duration) || 1500);
         });
         // 番茄钟进行中 → cheering；停止 3 秒后回到默认
         document.addEventListener('pet:cheer', e => {
+            if (petLoadSleep) return;
             const on = !!(e.detail && e.detail.on);
             clearTimeout(_petCheeringOffTimer);
             if (on) {
@@ -2224,6 +2532,7 @@
         // 长时间空闲 → yawning 1.5s → sleeping；任意鼠标移动惊醒
         let _petYawnTimer = null;
         document.addEventListener('pet:long-idle', e => {
+            if (petLoadSleep) return;
             const on = !!(e.detail && e.detail.on);
             if (typeof isPetFree === 'function' && isPetFree()) {
                 // 自由模式：交给 FSM，内部也会播 yawning
@@ -2263,12 +2572,26 @@
             });
         })();
 
-        // 空闲探测器：>10 分钟无任何活动则进入睡眠
+        // 加载睡眠锁 —— 必须在 petIdleWatcher IIFE 之前声明（IIFE 末尾会立即调用 reset()，
+        // 如果 reset 里引用了 TDZ 中的 let 变量会抛 ReferenceError 导致整个脚本中断）
+        var petLoadSleep = false;
+        var _wakeInProgress = false;
+
+        // 空闲探测器：>10 分钟无任何活动则进入睡眠；同时节流刷新 pet.lastActiveTime
         (function petIdleWatcher() {
             const IDLE_MS = 10 * 60 * 1000;
             let timer = null;
             let sleeping = false;
+            let _lastActiveWrite = 0;
             function reset() {
+                // 节流 30s 写入 lastActiveTime（供下次加载判断是否进入睡眠）
+                const _now = Date.now();
+                if (_now - _lastActiveWrite > 30000) {
+                    touchLastActive();
+                    _lastActiveWrite = _now;
+                }
+                // 加载睡眠激活时：活动只负责刷时间戳，不唤醒（只响应宠物点击）
+                if (petLoadSleep) { clearTimeout(timer); return; }
                 if (sleeping) {
                     sleeping = false;
                     document.dispatchEvent(new CustomEvent('pet:long-idle', { detail: { on: false } }));
@@ -2410,7 +2733,7 @@
                 }
                 const zz = document.getElementById('pet-zz');
                 if (zz) zz.classList.toggle('show', target === 'sleeping');
-            }, 220);
+            }, 80);
         }
         function mountPetChildren(type) {
             const el = document.getElementById('pet');
@@ -2545,22 +2868,29 @@
             const el = document.getElementById('pet');
             if (!el || el._dragAttached) return;
             el._dragAttached = true;
-            let startX, startY, originLeft, originTop, dragging = false, moved = false, pid = null, lastX = 0;
+            let startX, startY, originLeft, originTop, dragging = false, moved = false, pid = null, lastX = 0, dragScale = 1;
             el.addEventListener('pointerdown', e => {
                 if (e.button !== 0) return;
                 pid = e.pointerId;
                 startX = e.clientX; startY = e.clientY;
+                el.style.transition = 'none';
+                // 以当前父元素（即 absolute 定位的包含块）为基准，把视口位移换算到本地坐标系
+                const parent = el.parentElement || document.body;
+                const pRect = parent.getBoundingClientRect();
+                dragScale = parent.offsetWidth ? (pRect.width / parent.offsetWidth) : 1;
+                if (!isFinite(dragScale) || dragScale <= 0) dragScale = 1;
                 const rect = el.getBoundingClientRect();
-                originLeft = rect.left; originTop = rect.top;
+                originLeft = (rect.left - pRect.left) / dragScale;
+                originTop  = (rect.top  - pRect.top ) / dragScale;
                 lastX = originLeft;
                 dragging = true; moved = false;
                 el.setPointerCapture(pid);
             });
             el.addEventListener('pointermove', e => {
                 if (!dragging) return;
-                const dx = e.clientX - startX;
-                const dy = e.clientY - startY;
-                if (!moved && Math.hypot(dx, dy) > 6) {
+                const dx = (e.clientX - startX) / dragScale;
+                const dy = (e.clientY - startY) / dragScale;
+                if (!moved && Math.hypot(dx * dragScale, dy * dragScale) > 6) {
                     moved = true;
                     el.classList.add('dragging', 'pinned');
                     el.dataset.pinned = 'true';
@@ -2580,6 +2910,7 @@
                 if (!dragging) return;
                 dragging = false;
                 if (pid != null) { try { el.releasePointerCapture(pid); } catch (_) {} pid = null; }
+                el.style.transition = '';
                 if (moved) {
                     el.classList.remove('dragging');
                     const x = parseFloat(el.style.left) || 0;
@@ -2882,6 +3213,7 @@
         const petActiveStates = new Set();
         function recomputePetState() {
             if (petActiveStates.has('dragged')) { setPetState('dragged'); return; }
+            if (petLoadSleep) { setPetState('sleeping'); return; }
             if (loadPetMood() <= 2) { setPetState('sad'); return; }
             for (const s of PET_STATE_PRIORITY) {
                 if (petActiveStates.has(s)) { setPetState(s); return; }
@@ -2893,6 +3225,69 @@
             recomputePetState();
         }
         function applyMoodToBaseState() { recomputePetState(); }
+
+        // ===== 加载睡眠 & 唤醒序列 =====
+        // 注：petLoadSleep / _wakeInProgress 的 var 声明在 petIdleWatcher IIFE 前（为避免 TDZ）
+        const PET_LOAD_SLEEP_MS = 60 * 60 * 1000; // 1 小时
+        function touchLastActive() {
+            try { localStorage.setItem('pet.lastActiveTime', String(Date.now())); } catch(e) {}
+        }
+        function shouldLoadSleep() {
+            const t = parseInt(localStorage.getItem('pet.lastActiveTime'), 10);
+            if (!Number.isFinite(t)) return false;
+            return (Date.now() - t) > PET_LOAD_SLEEP_MS;
+        }
+        function enterLoadSleep() {
+            const el = document.getElementById('pet');
+            if (!el) return;
+            petLoadSleep = true;
+            const zz = document.getElementById('pet-zz');
+            if (zz) zz.classList.add('show');
+            if (typeof stopFreeRoam === 'function' && typeof isPetFree === 'function' && isPetFree()) {
+                stopFreeRoam();
+            }
+            try { recomputePetState(); } catch(e) { console.warn('[pet] enterLoadSleep recompute failed', e); }
+        }
+        function grantDailyWakeBonus() {
+            const today = new Date().toISOString().slice(0, 10);
+            if (localStorage.getItem('pet.lastWakeDate') === today) return;
+            localStorage.setItem('pet.lastWakeDate', today);
+            try { changePetMood(+1); } catch(e) {}
+        }
+        function playWakeSequence() {
+            if (!petLoadSleep || _wakeInProgress) return;
+            _wakeInProgress = true;
+            const el = document.getElementById('pet');
+            if (!el) { _wakeInProgress = false; petLoadSleep = false; return; }
+            const img = el.querySelector('.pet-img');
+            const zz  = document.getElementById('pet-zz');
+            const type = el.dataset.type || localStorage.getItem('pet.type') || 'cat';
+            // Step 1: 抖动 300ms
+            el.classList.add('waking-shake');
+            setTimeout(() => {
+                el.classList.remove('waking-shake');
+                // Step 2: 切到 idle + 弹出 + zzz 淡出（500ms）
+                PET_ALL_STATES_ARR.forEach(s => el.classList.remove('state-' + s));
+                el.classList.add('state-idle');
+                el.dataset.state = 'idle';
+                if (img) img.src = petImagePath(type, 'idle');
+                if (zz) zz.classList.remove('show');
+                el.classList.add('waking-pop');
+                setTimeout(() => {
+                    el.classList.remove('waking-pop');
+                    petLoadSleep = false;
+                    _wakeInProgress = false;
+                    petActiveStates.delete('sleeping');
+                    petActiveStates.delete('yawning');
+                    touchLastActive();
+                    grantDailyWakeBonus();
+                    try { recomputePetState(); } catch(e) {}
+                    if (typeof isPetFree === 'function' && isPetFree() && typeof startFreeRoam === 'function') {
+                        startFreeRoam();
+                    }
+                }, 500);
+            }, 300);
+        }
 
         function triggerCelebrate(ms) {
             petActiveStates.add('celebrate');
@@ -3020,7 +3415,7 @@
             toggleModal('pet-reset-modal');
         }
         function executePetReset() {
-            ['pet.type','pet.name','pet.mood','pet.lastInteract','pet.lastLoad','pet.feedDate','pet.feedCount','pet.pos','pet.free']
+            ['pet.type','pet.name','pet.mood','pet.lastInteract','pet.lastLoad','pet.feedDate','pet.feedCount','pet.pos','pet.free','pet.lastActiveTime','pet.lastWakeDate']
                 .forEach(k => localStorage.removeItem(k));
             stopFreeRoam();
             const petEl = document.getElementById('pet');
@@ -3056,6 +3451,7 @@
             let petClickTimer = null;
             el.addEventListener('click', () => {
                 if (el._suppressClick) return; // 拖拽刚结束
+                if (petLoadSleep) { playWakeSequence(); return; } // 加载睡眠 → 点击唤醒
                 if (petClickTimer) return;
                 petClickTimer = setTimeout(() => {
                     petClickTimer = null;
@@ -3069,14 +3465,16 @@
             // 双击 → 投喂；超出每日 3 次则摇头拒绝
             el.addEventListener('dblclick', () => {
                 if (el._suppressClick) return;
+                if (petLoadSleep) return; // 加载睡眠：屏蔽喂食
                 if (petClickTimer) { clearTimeout(petClickTimer); petClickTimer = null; }
                 showPetMoodBar();
                 const ok = tryFeedPet();
                 if (ok) triggerFeedAnimation();
                 else triggerRefuseAnimation();
             });
-            // hover 显示心情条；自由模式下若在睡觉则惊醒
+            // hover 显示心情条；自由模式下若在睡觉则惊醒（加载睡眠不响应 hover）
             el.addEventListener('mouseenter', () => {
+                if (petLoadSleep) return;
                 showPetMoodBar();
                 if (typeof isPetFree === 'function' && isPetFree() && petFsm.state === 'sleeping') {
                     fsmWakeFromSleep();
@@ -3128,6 +3526,30 @@
             }
         })();
 
+        // 宠物朝向鼠标：静止时跟随鼠标 X 方向翻转
+        (function petFaceMouse() {
+            let pendingX = null;
+            let rafId = null;
+            function apply() {
+                rafId = null;
+                const el = document.getElementById('pet');
+                if (!el || pendingX === null) return;
+                if (petLoadSleep) return;
+                if (petActiveStates && petActiveStates.has('dragged')) return;
+                if (typeof petFsm !== 'undefined' && petFsm.state === 'walking') return;
+                const r = el.getBoundingClientRect();
+                if (r.width === 0) return;
+                const cx = r.left + r.width / 2;
+                const dx = pendingX - cx;
+                if (Math.abs(dx) < 6) return; // 死区，避免紧贴中线时反复翻转
+                el.classList.toggle('facing-left', dx < 0);
+            }
+            document.addEventListener('mousemove', (e) => {
+                pendingX = e.clientX;
+                if (rafId === null) rafId = requestAnimationFrame(apply);
+            }, { passive: true });
+        })();
+
         window.onload = () => {
             renderGroupTabs();
             renderTodos();
@@ -3153,6 +3575,13 @@
             } else {
                 if(savedUrl) applyBgImageUrl(savedUrl);
             }
+
+            // 加载睡眠检测：放在 onload 末尾 + try/catch 包裹，确保即使抛错也不影响面板渲染
+            try {
+                if (localStorage.getItem('pet.type') && localStorage.getItem('pet.name') && shouldLoadSleep()) {
+                    enterLoadSleep();
+                }
+            } catch(e) { console.warn('[pet] load-sleep init failed', e); }
         };
     </script>
 </body>
