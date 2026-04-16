@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的个人工作台</title>
+    <title>Ayu Tab</title>
     <!-- 引入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- 引入 Lucide 图标库 -->
@@ -378,7 +378,7 @@
                     <div class="relative group/pomo">
                         <button id="pomodoro-btn" class="apple-glass p-5 rounded-full hover:bg-white/30 transition-all flex items-center justify-center" title="番茄钟"><i data-lucide="timer" class="w-6 h-6"></i></button>
                         <div id="pomodoro-panel" class="absolute right-0 top-full mt-3 w-72 apple-glass rounded-[1.8rem] p-5 z-50 opacity-0 invisible group-hover/pomo:opacity-100 group-hover/pomo:visible transition-all duration-500 transform translate-y-2 group-hover/pomo:translate-y-0">
-                            <div class="text-[10px] opacity-40 font-black tracking-[0.3em] uppercase mb-4">番茄钟</div>
+                            <div class="text-xs opacity-60 font-black tracking-[0.2em] uppercase mb-4">番茄钟</div>
                             <!-- 配置区（未运行时显示） -->
                             <div id="pomodoro-setup">
                                 <div class="flex items-center gap-2 mb-3">
@@ -410,21 +410,21 @@
                     </button>
                     <!-- 下拉列表 -->
                     <div class="absolute right-0 mt-3 py-3 w-56 apple-glass rounded-[1.8rem] opacity-0 invisible group-hover/audio:opacity-100 group-hover/audio:visible transition-all duration-500 z-50 transform translate-y-2 group-hover/audio:translate-y-0 max-h-[70vh] overflow-y-auto no-scrollbar">
-                        <div class="px-6 py-2 mb-1 text-[9px] opacity-30 font-black tracking-[0.3em] uppercase">Soundscape</div>
-                        <button onclick="changeAudio('none')" class="w-full text-left px-6 py-3 text-[10px] uppercase tracking-widest font-bold hover:bg-white/10 transition-colors flex items-center gap-3">
-                            <i data-lucide="volume-x" class="w-4 h-4 opacity-50"></i> Mute
+                        <div class="px-6 py-2 mb-1 text-xs opacity-60 font-black tracking-[0.2em] uppercase">环境音</div>
+                        <button onclick="changeAudio('none')" class="w-full text-left px-6 py-3 text-xs uppercase tracking-widest font-bold hover:bg-white/10 transition-colors flex items-center gap-3">
+                            <i data-lucide="volume-x" class="w-4 h-4 opacity-50"></i> 静音
                         </button>
-                        <button onclick="changeAudio('rain')" class="w-full text-left px-6 py-3 text-[10px] uppercase tracking-widest font-bold hover:bg-white/10 transition-colors flex items-center gap-3">
-                            <i data-lucide="cloud-rain" class="w-4 h-4 opacity-50"></i> Rainy Day
+                        <button onclick="changeAudio('rain')" class="w-full text-left px-6 py-3 text-xs uppercase tracking-widest font-bold hover:bg-white/10 transition-colors flex items-center gap-3">
+                            <i data-lucide="cloud-rain" class="w-4 h-4 opacity-50"></i> 雨声
                         </button>
                         <!-- 用户自定义 -->
-                        <div class="px-6 pt-3 pb-1 mt-2 border-t border-white/10 text-[9px] opacity-30 font-black tracking-[0.3em] uppercase">My Tracks</div>
+                        <div class="px-6 pt-3 pb-1 mt-2 border-t border-white/10 text-xs opacity-60 font-black tracking-[0.2em] uppercase">我的音乐</div>
                         <div id="custom-audio-list"></div>
-                        <button onclick="addCustomAudioUrl(event)" class="w-full text-left px-6 py-3 text-[10px] uppercase tracking-widest font-bold hover:bg-white/10 transition-colors flex items-center gap-3">
-                            <i data-lucide="link" class="w-4 h-4 opacity-50"></i> Add URL
+                        <button onclick="addCustomAudioUrl(event)" class="w-full text-left px-6 py-3 text-xs uppercase tracking-widest font-bold hover:bg-white/10 transition-colors flex items-center gap-3">
+                            <i data-lucide="link" class="w-4 h-4 opacity-50"></i> 添加链接
                         </button>
-                        <button onclick="document.getElementById('custom-audio-file').click()" class="w-full text-left px-6 py-3 text-[10px] uppercase tracking-widest font-bold hover:bg-white/10 transition-colors flex items-center gap-3">
-                            <i data-lucide="upload" class="w-4 h-4 opacity-50"></i> Upload File
+                        <button onclick="document.getElementById('custom-audio-file').click()" class="w-full text-left px-6 py-3 text-xs uppercase tracking-widest font-bold hover:bg-white/10 transition-colors flex items-center gap-3">
+                            <i data-lucide="upload" class="w-4 h-4 opacity-50"></i> 上传文件
                         </button>
                         <input id="custom-audio-file" type="file" accept="audio/*" class="hidden" onchange="addCustomAudioFile(event)" />
                     </div>
@@ -439,32 +439,36 @@
                         <i data-lucide="layout-dashboard" class="w-6 h-6"></i>
                     </button>
                     <div class="absolute right-0 mt-3 py-3 w-52 apple-glass rounded-[1.8rem] opacity-0 invisible group-hover/panels:opacity-100 group-hover/panels:visible transition-all duration-500 z-50 transform translate-y-2 group-hover/panels:translate-y-0">
-                        <div class="px-6 py-2 mb-1 text-[9px] opacity-30 font-black tracking-[0.3em] uppercase">Panels</div>
-                        <button onclick="togglePanel('shortcuts')" class="w-full text-left px-6 py-3 text-[10px] uppercase tracking-widest font-bold hover:bg-white/10 transition-colors flex items-center justify-between">
+                        <div class="px-6 py-2 mb-1 text-xs opacity-60 font-black tracking-[0.2em] uppercase">面板</div>
+                        <button onclick="togglePanel('shortcuts')" class="w-full text-left px-6 py-3 text-xs uppercase tracking-widest font-bold hover:bg-white/10 transition-colors flex items-center justify-between">
                             <span class="flex items-center gap-3"><i data-lucide="layout-grid" class="w-4 h-4 opacity-50"></i> Shortcuts</span>
                             <i id="dd-check-shortcuts" data-lucide="check" class="w-3.5 h-3.5 transition-opacity"></i>
                         </button>
-                        <button onclick="togglePanel('note')" class="w-full text-left px-6 py-3 text-[10px] uppercase tracking-widest font-bold hover:bg-white/10 transition-colors flex items-center justify-between">
+                        <button onclick="togglePanel('note')" class="w-full text-left px-6 py-3 text-xs uppercase tracking-widest font-bold hover:bg-white/10 transition-colors flex items-center justify-between">
                             <span class="flex items-center gap-3"><i data-lucide="file-text" class="w-4 h-4 opacity-50"></i> Notes</span>
                             <i id="dd-check-note" data-lucide="check" class="w-3.5 h-3.5 transition-opacity"></i>
                         </button>
-                        <button onclick="togglePanel('todo')" class="w-full text-left px-6 py-3 text-[10px] uppercase tracking-widest font-bold hover:bg-white/10 transition-colors flex items-center justify-between">
+                        <button onclick="togglePanel('todo')" class="w-full text-left px-6 py-3 text-xs uppercase tracking-widest font-bold hover:bg-white/10 transition-colors flex items-center justify-between">
                             <span class="flex items-center gap-3"><i data-lucide="check-square" class="w-4 h-4 opacity-50"></i> Tasks</span>
                             <i id="dd-check-todo" data-lucide="check" class="w-3.5 h-3.5 transition-opacity"></i>
                         </button>
-                        <button onclick="togglePanel('pet')" class="w-full text-left px-6 py-3 text-[10px] uppercase tracking-widest font-bold hover:bg-white/10 transition-colors flex items-center justify-between">
+                        <button onclick="togglePanel('pet')" class="w-full text-left px-6 py-3 text-xs uppercase tracking-widest font-bold hover:bg-white/10 transition-colors flex items-center justify-between">
                             <span class="flex items-center gap-3"><i data-lucide="heart" class="w-4 h-4 opacity-50"></i> Pet</span>
                             <i id="dd-check-pet" data-lucide="check" class="w-3.5 h-3.5 transition-opacity"></i>
+                        </button>
+                        <button onclick="togglePanel('hitokoto')" class="w-full text-left px-6 py-3 text-xs uppercase tracking-widest font-bold hover:bg-white/10 transition-colors flex items-center justify-between">
+                            <span class="flex items-center gap-3"><i data-lucide="quote" class="w-4 h-4 opacity-50"></i> Motto</span>
+                            <i id="dd-check-hitokoto" data-lucide="check" class="w-3.5 h-3.5 transition-opacity"></i>
                         </button>
                     </div>
                 </div>
                 <!-- 作者主页下拉 -->
                 <div class="relative group/author">
                     <button class="apple-glass p-5 rounded-full hover:bg-white/30 transition-all flex items-center justify-center">
-                        <i data-lucide="smile" class="w-6 h-6"></i>
+                        <i data-lucide="rocket" class="w-6 h-6"></i>
                     </button>
                     <div class="absolute right-0 mt-3 py-3 w-56 apple-glass rounded-[1.8rem] opacity-0 invisible group-hover/author:opacity-100 group-hover/author:visible transition-all duration-500 z-50 transform translate-y-2 group-hover/author:translate-y-0">
-                        <div id="author-dd-name" class="px-6 py-2 mb-1 text-[9px] opacity-30 font-black tracking-[0.3em] uppercase">作者主页</div>
+                        <div id="author-dd-name" class="px-6 py-2 mb-1 text-xs opacity-60 font-black tracking-[0.2em] uppercase">作者主页</div>
                         <div id="author-links"></div>
                     </div>
                 </div>
@@ -489,14 +493,34 @@
                     <!-- 每日格言 -->
                     <div id="hitokoto-container" class="max-w-xl text-center px-4 mb-8 h-14 flex flex-col justify-center relative group/hitokoto">
                         <div class="absolute -top-1 left-full ml-2 flex items-center gap-1 opacity-0 group-hover/hitokoto:opacity-100 transition-opacity z-10">
+                            <div class="relative group/hsrc">
+                                <button title="切换来源" class="p-1.5 rounded-full hover:bg-white/15 transition-all">
+                                    <i data-lucide="globe" class="w-3 h-3 opacity-70"></i>
+                                </button>
+                                <div class="absolute top-full right-0 mt-2 py-2 w-40 apple-glass rounded-2xl opacity-0 invisible group-hover/hsrc:opacity-100 group-hover/hsrc:visible transition-all z-50">
+                                    <button onclick="setHitokotoSource('hitokoto', event)" data-src="hitokoto" class="src-item w-full text-left px-4 py-2 text-xs font-bold tracking-widest uppercase hover:bg-white/10 transition-colors flex items-center gap-2">
+                                        <i data-lucide="check" class="w-3 h-3 src-check opacity-0 flex-shrink-0"></i>
+                                        <span>一言</span>
+                                    </button>
+                                    <button onclick="setHitokotoSource('jinrishici', event)" data-src="jinrishici" class="src-item w-full text-left px-4 py-2 text-xs font-bold tracking-widest uppercase hover:bg-white/10 transition-colors flex items-center gap-2">
+                                        <i data-lucide="check" class="w-3 h-3 src-check opacity-0 flex-shrink-0"></i>
+                                        <span>今日诗词</span>
+                                    </button>
+                                    <button onclick="setHitokotoSource('githubzen', event)" data-src="githubzen" class="src-item w-full text-left px-4 py-2 text-xs font-bold tracking-widest uppercase hover:bg-white/10 transition-colors flex items-center gap-2">
+                                        <i data-lucide="check" class="w-3 h-3 src-check opacity-0 flex-shrink-0"></i>
+                                        <span>Zen 禅言</span>
+                                    </button>
+                                    <button onclick="setHitokotoSource('zenquotes', event)" data-src="zenquotes" class="src-item w-full text-left px-4 py-2 text-xs font-bold tracking-widest uppercase hover:bg-white/10 transition-colors flex items-center gap-2">
+                                        <i data-lucide="check" class="w-3 h-3 src-check opacity-0 flex-shrink-0"></i>
+                                        <span>英文名言</span>
+                                    </button>
+                                </div>
+                            </div>
                             <button onclick="customizeHitokoto(event)" title="自定义" class="p-1.5 rounded-full hover:bg-white/15 transition-all">
                                 <i data-lucide="pencil" class="w-3 h-3 opacity-70"></i>
                             </button>
                             <button onclick="refreshHitokoto(event)" title="换一条" class="p-1.5 rounded-full hover:bg-white/15 transition-all">
                                 <i data-lucide="refresh-cw" class="w-3 h-3 opacity-70"></i>
-                            </button>
-                            <button onclick="restoreHitokoto(event)" title="还原为默认格言" class="p-1.5 rounded-full hover:bg-white/15 transition-all">
-                                <i data-lucide="rotate-ccw" class="w-3 h-3 opacity-70"></i>
                             </button>
                             <button onclick="closeHitokoto(event)" title="关闭" class="p-1.5 rounded-full hover:bg-white/15 transition-all">
                                 <i data-lucide="x" class="w-3 h-3 opacity-70"></i>
@@ -883,7 +907,7 @@
         const AUTHOR_CONFIG = {
             name: '作者主页',
             links: [
-                { label: '小红书', icon: 'heart', url: 'https://xhslink.com/m/4PoZVQp09DM' },
+                { label: '阿宇不画图-小红书', icon: 'heart', url: 'https://xhslink.com/m/4PoZVQp09DM' },
             ]
         };
 
@@ -1732,7 +1756,7 @@
             if (!container) return;
             container.innerHTML = customAudioList.map(t => `
                 <div class="group flex items-center hover:bg-white/10 transition-colors">
-                    <button onclick="playCustomAudio('${t.id}')" class="flex-1 text-left px-6 py-3 text-[10px] uppercase tracking-widest font-bold flex items-center gap-3 min-w-0">
+                    <button onclick="playCustomAudio('${t.id}')" class="flex-1 text-left px-6 py-3 text-xs uppercase tracking-widest font-bold flex items-center gap-3 min-w-0">
                         <i data-lucide="${t.kind === 'file' ? 'file-music' : 'link'}" class="w-4 h-4 opacity-50 flex-shrink-0"></i>
                         <span class="truncate">${t.name.replace(/</g,'&lt;')}</span>
                     </button>
@@ -1819,6 +1843,91 @@
 
         const HITOKOTO_CUSTOM_KEY = 'hitokoto.custom';
         const HITOKOTO_LAST_API_KEY = 'hitokoto.lastApi';
+        const HITOKOTO_SOURCE_KEY = 'hitokoto.source';
+        const HITOKOTO_FETCH_TIMEOUT = 5000;
+
+        function fetchWithTimeout(url, opts = {}) {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), HITOKOTO_FETCH_TIMEOUT);
+            return fetch(url, { ...opts, signal: controller.signal })
+                .finally(() => clearTimeout(timer));
+        }
+
+        const HITOKOTO_SOURCES = {
+            jinrishici: {
+                name: '今日诗词',
+                fetch: async () => {
+                    let token = localStorage.getItem('jinrishici.token');
+                    if (!token) {
+                        const t = await fetchWithTimeout('https://v2.jinrishici.com/token').then(r => r.json());
+                        if (t && t.status === 'success' && t.data) {
+                            token = t.data;
+                            localStorage.setItem('jinrishici.token', token);
+                        }
+                    }
+                    const resp = await fetchWithTimeout('https://v2.jinrishici.com/one.json', {
+                        headers: token ? { 'X-User-Token': token } : {}
+                    });
+                    const j = await resp.json();
+                    const d = (j && j.data) || {};
+                    const origin = d.origin || {};
+                    return {
+                        text: d.content || '',
+                        from: `— ${origin.author || ''}「${origin.title || ''}」`
+                    };
+                }
+            },
+            hitokoto: {
+                name: '一言',
+                fetch: async () => {
+                    const d = await fetchWithTimeout('https://v1.hitokoto.cn').then(r => r.json());
+                    return {
+                        text: d.hitokoto,
+                        from: `— ${d.from_who || ''} 「${d.from}」`
+                    };
+                }
+            },
+            zenquotes: {
+                name: '英文名言',
+                fetch: async () => {
+                    const arr = await fetchWithTimeout('https://zenquotes.io/api/random').then(r => r.json());
+                    const d = Array.isArray(arr) ? arr[0] : arr;
+                    return {
+                        text: d.q || '',
+                        from: `— ${d.a || ''}`
+                    };
+                }
+            },
+            githubzen: {
+                name: 'Zen 禅言',
+                fetch: async () => {
+                    const t = await fetchWithTimeout('https://api.github.com/zen').then(r => r.text());
+                    return { text: t, from: '— GitHub Zen' };
+                }
+            }
+        };
+
+        function getHitokotoSource() {
+            const s = localStorage.getItem(HITOKOTO_SOURCE_KEY);
+            return HITOKOTO_SOURCES[s] ? s : 'hitokoto';
+        }
+
+        function setHitokotoSource(key, e) {
+            if (e) e.stopPropagation();
+            if (!HITOKOTO_SOURCES[key]) return;
+            localStorage.setItem(HITOKOTO_SOURCE_KEY, key);
+            localStorage.removeItem(HITOKOTO_CUSTOM_KEY);
+            updateHitokotoSourceUI();
+            fetchHitokoto();
+        }
+
+        function updateHitokotoSourceUI() {
+            const curr = getHitokotoSource();
+            document.querySelectorAll('.src-item').forEach(btn => {
+                const check = btn.querySelector('.src-check');
+                if (check) check.style.opacity = (btn.dataset.src === curr) ? '1' : '0';
+            });
+        }
 
         function showHitokoto(text, from) {
             const textEl = document.getElementById('hitokoto');
@@ -1829,7 +1938,24 @@
             fromEl.style.opacity = "1";
         }
 
+        async function tryFetchWithFallback() {
+            const primary = getHitokotoSource();
+            const order = [primary, ...Object.keys(HITOKOTO_SOURCES).filter(k => k !== primary)];
+            let lastErr;
+            for (const key of order) {
+                try {
+                    const result = await HITOKOTO_SOURCES[key].fetch();
+                    if (result && result.text) return result;
+                } catch (err) {
+                    lastErr = err;
+                    console.warn(`[hitokoto] source "${key}" failed:`, err);
+                }
+            }
+            throw lastErr || new Error('all sources failed');
+        }
+
         async function fetchHitokoto() {
+            updateHitokotoSourceUI();
             const customRaw = localStorage.getItem(HITOKOTO_CUSTOM_KEY);
             if (customRaw) {
                 try {
@@ -1842,15 +1968,19 @@
             }
 
             try {
-                const response = await fetch('https://v1.hitokoto.cn');
-                const data = await response.json();
-                const text = data.hitokoto;
-                const from = `— ${data.from_who || ''} 「${data.from}」`;
+                const { text, from } = await tryFetchWithFallback();
                 localStorage.setItem(HITOKOTO_LAST_API_KEY, JSON.stringify({ text, from }));
                 showHitokoto(text, from);
             } catch (err) {
                 console.error('Failed to fetch hitokoto:', err);
-                document.getElementById('hitokoto-container').style.display = 'none';
+                const lastRaw = localStorage.getItem(HITOKOTO_LAST_API_KEY);
+                if (lastRaw) {
+                    try {
+                        const last = JSON.parse(lastRaw);
+                        if (last && last.text) { showHitokoto(last.text, last.from); return; }
+                    } catch {}
+                }
+                showHitokoto('愿你今日，心中有光。', '— Ayu Tab');
             }
         }
         fetchHitokoto();
@@ -1859,10 +1989,7 @@
             if (e) e.stopPropagation();
             localStorage.removeItem(HITOKOTO_CUSTOM_KEY);
             try {
-                const response = await fetch('https://v1.hitokoto.cn');
-                const data = await response.json();
-                const text = data.hitokoto;
-                const from = `— ${data.from_who || ''} 「${data.from}」`;
+                const { text, from } = await tryFetchWithFallback();
                 localStorage.setItem(HITOKOTO_LAST_API_KEY, JSON.stringify({ text, from }));
                 showHitokoto(text, from);
             } catch (err) {
@@ -1870,25 +1997,9 @@
             }
         }
 
-        function restoreHitokoto(e) {
-            if (e) e.stopPropagation();
-            localStorage.removeItem(HITOKOTO_CUSTOM_KEY);
-            const lastRaw = localStorage.getItem(HITOKOTO_LAST_API_KEY);
-            if (lastRaw) {
-                try {
-                    const last = JSON.parse(lastRaw);
-                    if (last && last.text) {
-                        showHitokoto(last.text, last.from);
-                        return;
-                    }
-                } catch {}
-            }
-            fetchHitokoto();
-        }
-
         function closeHitokoto(e) {
             if (e) e.stopPropagation();
-            document.getElementById('hitokoto-container').style.display = 'none';
+            if (panelVisibility.hitokoto) togglePanel('hitokoto');
         }
 
         function customizeHitokoto(e) {
@@ -2061,7 +2172,7 @@
             const container = document.getElementById('author-links');
             container.innerHTML = AUTHOR_CONFIG.links.map(link => `
                 <a href="${link.url}" target="_blank" rel="noopener"
-                   class="w-full text-left px-6 py-3 text-[10px] uppercase tracking-widest font-bold hover:bg-white/10 transition-colors flex items-center gap-3">
+                   class="w-full text-left px-6 py-3 text-xs uppercase tracking-widest font-bold hover:bg-white/10 transition-colors flex items-center gap-3">
                     <i data-lucide="${link.icon}" class="w-4 h-4 opacity-50"></i>
                     <span class="flex-1 truncate">${link.label}</span>
                     <i data-lucide="external-link" class="w-3 h-3 opacity-30"></i>
@@ -2618,18 +2729,21 @@
         bindOutsideClick('note-toolbar-dropdown', 'note-toolbar-toggle');
 
         // ===== 面板显示控制 =====
-        const PANEL_KEYS = ['shortcuts', 'note', 'todo', 'pet'];
+        const PANEL_KEYS = ['shortcuts', 'note', 'todo', 'pet', 'hitokoto'];
+        const MAIN_PANEL_KEYS = ['shortcuts', 'note', 'todo', 'pet'];
         const PANEL_ID_MAP = {
             shortcuts: 'panel-shortcuts',
             note: 'panel-note-col',
             todo: 'panel-todo-col',
-            pet: 'panel-pet'
+            pet: 'panel-pet',
+            hitokoto: 'hitokoto-container'
         };
 
         function loadPanelVisibility() {
+            const defaults = { shortcuts: true, note: true, todo: true, pet: true, hitokoto: true };
             const saved = localStorage.getItem('panel_visibility_v1');
-            if (saved) { try { return JSON.parse(saved); } catch(e) {} }
-            return { shortcuts: true, note: true, todo: true, pet: true };
+            if (saved) { try { return { ...defaults, ...JSON.parse(saved) }; } catch(e) {} }
+            return defaults;
         }
 
         let panelVisibility = loadPanelVisibility();
@@ -2639,10 +2753,10 @@
         }
 
         function updatePanelToggleUI() {
-            const visibleCount = PANEL_KEYS.filter(k => panelVisibility[k]).length;
+            const mainVisibleCount = MAIN_PANEL_KEYS.filter(k => panelVisibility[k]).length;
             PANEL_KEYS.forEach(key => {
                 const isOn = panelVisibility[key];
-                const isLast = isOn && visibleCount === 1;
+                const isLast = isOn && mainVisibleCount === 1 && MAIN_PANEL_KEYS.includes(key);
 
                 // 设置面板里的开关按钮
                 const btn = document.getElementById('toggle-' + key);
@@ -2675,15 +2789,20 @@
         function applyPanelVisibility() {
             PANEL_KEYS.forEach(key => {
                 const el = document.getElementById(PANEL_ID_MAP[key]);
-                if (el) el.classList.toggle('hidden', !panelVisibility[key]);
+                if (el) {
+                    el.classList.toggle('hidden', !panelVisibility[key]);
+                    if (panelVisibility[key]) el.style.removeProperty('display');
+                }
             });
             updatePanelToggleUI();
             setTimeout(calcAndRenderBookmarks, 50);
         }
 
         function togglePanel(key) {
-            const visibleCount = PANEL_KEYS.filter(k => panelVisibility[k]).length;
-            if (panelVisibility[key] && visibleCount <= 1) return; // 至少保留一个面板
+            if (MAIN_PANEL_KEYS.includes(key)) {
+                const visibleCount = MAIN_PANEL_KEYS.filter(k => panelVisibility[k]).length;
+                if (panelVisibility[key] && visibleCount <= 1) return; // 至少保留一个主面板
+            }
             panelVisibility[key] = !panelVisibility[key];
             savePanelVisibility();
             applyPanelVisibility();
