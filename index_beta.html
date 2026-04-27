@@ -1103,7 +1103,7 @@
     <div id="todo-modal" class="modal">
         <div class="apple-glass p-12 rounded-[4rem] max-w-md w-full relative modal-content">
             <button onclick="toggleModal('todo-modal')" class="modal-close"><i data-lucide="x"></i></button>
-            <h3 class="text-2xl font-light mb-8 tracking-tight">添加待办事项</h3>
+            <h3 id="todo-modal-title" class="text-2xl font-light mb-8 tracking-tight">添加待办事项</h3>
             <div class="space-y-5">
                 <input type="text" id="todo-input" class="apple-input font-light" placeholder="输入任务内容...">
                 <!-- 优先级 -->
@@ -1147,7 +1147,7 @@
                     </div>
                 </div>
                 <div class="pt-2">
-                    <button onclick="confirmAddTodo()" class="w-full bg-white text-black font-black py-5 rounded-[2rem]">添加任务</button>
+                    <button id="todo-modal-confirm" onclick="confirmAddTodo()" class="w-full bg-white text-black font-black py-5 rounded-[2rem]">添加任务</button>
                 </div>
             </div>
         </div>
@@ -1962,7 +1962,7 @@ ${body}</DL><p>
             const dotColor = { high: 'bg-red-500', medium: 'bg-amber-400', low: 'bg-sky-400' }[t.priority] || 'bg-white/30';
             const priorityDot = isDone ? '' : `<button onclick="showTodoPriorityMenu(event, '${t.id}')" class="w-1.5 h-1.5 rounded-full ${dotColor} flex-shrink-0 mt-[6px] cursor-pointer hover:scale-150 transition-transform" title="修改优先级"></button>`;
             const dueLabel = formatTodoDueLabel(t);
-            const dueDateHtml = (dueLabel && !isDone) ? `<span class="flex-shrink-0 ml-2 text-sm font-bold tracking-wide whitespace-nowrap ${dueSoon ? 'text-orange-400' : 'opacity-50'}">${dueLabel}</span>` : '';
+            const dueDateHtml = (dueLabel && !isDone) ? `<span onclick="editTodo('${t.id}')" class="flex-shrink-0 ml-2 text-sm font-bold tracking-wide whitespace-nowrap cursor-pointer hover:opacity-100 transition-opacity ${dueSoon ? 'text-orange-400' : 'opacity-50'}" title="修改截止时间">${dueLabel}</span>` : '';
             const dragAttrs = isDone ? '' : `draggable="true" ondragstart="onTodoDragStart(event,'${t.id}')" ondragover="onTodoDragOver(event,'${t.id}')" ondragleave="onTodoDragLeave(event)" ondrop="onTodoDrop(event,'${t.id}')" ondragend="onTodoDragEnd()"`;
             const highBorder = (t.priority === 'high' && !isDone) ? 'border-l-2 border-red-500/60' : '';
             return `<div class="todo-item flex items-start justify-between gap-2 group/item px-3 py-2.5 rounded-2xl hover:bg-white/5 transition-all ${isDone ? 'opacity-50' : ''} ${highBorder}" data-id="${t.id}" ${dragAttrs}>
@@ -1985,6 +1985,9 @@ ${body}</DL><p>
                         ${dueDateHtml}
                     </div>
                 </div>
+                ${isDone ? '' : `<button onclick="editTodo('${t.id}')" title="修改截止时间" class="opacity-0 group-hover/item:opacity-30 hover:!opacity-100 transition-all p-1 flex-shrink-0 mt-0.5">
+                    <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+                </button>`}
                 <button onclick="deleteTodoById('${t.id}')" class="opacity-0 group-hover/item:opacity-30 hover:!opacity-100 hover:text-red-400 transition-all p-1 flex-shrink-0 mt-0.5">
                     <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                 </button>
@@ -2403,14 +2406,45 @@ ${body}</DL><p>
             }
         });
 
+        // 待办 modal 双模式：editingTodoId 为 null 时新增，非 null 时编辑现有项
+        let editingTodoId = null;
+
+        function setTodoModalMode(mode) {
+            const title = document.getElementById('todo-modal-title');
+            const btn = document.getElementById('todo-modal-confirm');
+            if (mode === 'edit') {
+                if (title) title.textContent = '编辑待办';
+                if (btn) btn.textContent = '保存修改';
+            } else {
+                if (title) title.textContent = '添加待办事项';
+                if (btn) btn.textContent = '添加任务';
+            }
+        }
+
         function addTodo() {
+            editingTodoId = null;
             currentTodoPriority = 'medium';
             document.getElementById('todo-input').value = '';
             document.getElementById('todo-due').value = '';
             document.getElementById('todo-due-time').value = '';
             setTodoPriority('medium');
+            setTodoModalMode('add');
             toggleModal('todo-modal');
             setTimeout(() => document.getElementById('todo-input').focus(), 100);
+        }
+
+        function editTodo(id) {
+            const t = todos.find(x => x.id === id);
+            if (!t) return;
+            editingTodoId = id;
+            currentTodoPriority = t.priority || 'medium';
+            document.getElementById('todo-input').value = t.text || '';
+            // 把存储的 yyyy-mm-dd 还原为 yyyy/mm/dd 显示
+            document.getElementById('todo-due').value = t.dueDate ? t.dueDate.replace(/-/g, '/') : '';
+            document.getElementById('todo-due-time').value = t.dueTime || '';
+            setTodoPriority(currentTodoPriority);
+            setTodoModalMode('edit');
+            toggleModal('todo-modal');
         }
 
         function confirmAddTodo() {
@@ -2420,18 +2454,29 @@ ${body}</DL><p>
             const dueTimeRaw = parseTodoDueTimeInput(document.getElementById('todo-due-time').value);
             // 时间仅在有日期时才保存，避免"光有时间没日期"的无意义状态
             const dueTime = dueDate ? dueTimeRaw : null;
-            const todo = {
-                id: 'td-' + Date.now(),
-                text,
-                completed: false,
-                priority: currentTodoPriority,
-                dueDate,
-                dueTime,
-                groupId: currentTodoGroupId,
-                createdAt: Date.now(),
-                completedAt: null
-            };
-            todos.push(todo);
+            if (editingTodoId) {
+                const t = todos.find(x => x.id === editingTodoId);
+                if (t) {
+                    t.text = text;
+                    t.priority = currentTodoPriority;
+                    t.dueDate = dueDate;
+                    t.dueTime = dueTime;
+                }
+                editingTodoId = null;
+            } else {
+                const todo = {
+                    id: 'td-' + Date.now(),
+                    text,
+                    completed: false,
+                    priority: currentTodoPriority,
+                    dueDate,
+                    dueTime,
+                    groupId: currentTodoGroupId,
+                    createdAt: Date.now(),
+                    completedAt: null
+                };
+                todos.push(todo);
+            }
             saveTodos();
             renderTodos();
             toggleModal('todo-modal');
