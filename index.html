@@ -4271,6 +4271,14 @@ ${body}</DL><p>
             if (!el) return;
             const target = PET_STATE_IMAGE[state] ? state : 'idle';
             if (el.dataset.state === target) return;
+            // 离开 walking 视觉时，截断仍在进行的 left/top 位移 transition：
+            // 否则瞬时状态（happy/celebrate/eating…）或心情变化在走路途中切走精灵图，
+            // 帧动画停了、位移却继续——表现为"贴着一张静止图漂移"。FSM 自身退出已在
+            // fsmEnter 里冻结，这里补上 recompute/瞬时状态这条绕过 fsmEnter 的路径。
+            if (el.dataset.state === 'walking' && target !== 'walking') {
+                stopWalkingAnimation();
+                freezePetPosition();
+            }
             const img = el.querySelector('.pet-img');
             const type = el.dataset.type || localStorage.getItem('pet.type') || 'cat';
             // 直接 src 替换 → 所有素材已预载 → 缓存命中下零闪烁
