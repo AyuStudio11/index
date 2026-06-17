@@ -4278,6 +4278,14 @@ ${body}</DL><p>
             if (el.dataset.state === 'walking' && target !== 'walking') {
                 stopWalkingAnimation();
                 freezePetPosition();
+                // 行走被打断（瞬时状态/心情/拖拽）→ 让 FSM 正常收尾这次行走：
+                // 否则它仍以为在走，反应放完后 recompute 会恢复 walking 帧 → 原地踏步。
+                // 延后一拍执行，避免在 setPetState 内重入 fsmEnter→recompute。
+                if (petFsm.state === 'walking') {
+                    setTimeout(() => {
+                        if (petFsm.mode && petFsm.state === 'walking') fsmEnter('standing');
+                    }, 0);
+                }
             }
             const img = el.querySelector('.pet-img');
             const type = el.dataset.type || localStorage.getItem('pet.type') || 'cat';
@@ -4473,6 +4481,9 @@ ${body}</DL><p>
                         }
                         lastX = newLeft;
                     }
+                    // 每帧重申无过渡：若抓起时宠物正在走路，freeze 会把 transition 重置为
+                    // 基础的 4.8s，导致拖拽脱手；这里确保始终跟手。
+                    el.style.transition = 'none';
                     el.style.left = newLeft + 'px';
                     el.style.top  = newTop + 'px';
                 }
